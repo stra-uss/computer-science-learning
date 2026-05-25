@@ -10,19 +10,23 @@
     - O sabor de cada pizza pode ter múltiplos ingredientes.
     - O pedido deve registrar o cliente, uma lista de pizzas pedidas e o status do pedido (Pendente, Preparando, Entregue).  
 
-Neste contexto, o exercício 02 consiste em examinar o código-fonte a seguir, descrevendo o que você compreendeu acerca dos conceitos:
+Neste contexto, o exercício 02 consiste em examinar o código-fonte, a seguir, em linguagem Python, descrevendo o que você compreendeu acerca dos conceitos:
  - Herança
  - Polimorfimso
  - Composição e Associação
 
+
+#### Classe Cliente
 ```python
-# Classe Cliente
 class Cliente:
     def __init__(self, nome: str, telefone: str):
         self.nome = nome
         self.telefone = telefone
+```
 
-# Superclasse Pizza
+#### Superclasse Pizza
+
+```python
 class Pizza:
     def __init__(self, nome: str, tamanho: str, preco_base: float, ingredientes: list):
         self.nome = nome
@@ -33,16 +37,16 @@ class Pizza:
     def calcular_preco(self) -> float:
         """Método base para cálculo de preço."""
         return self.preco_base
+```
 
+#### Subclasses
 
-# Subclasse
+```python
 class PizzaTradicional(Pizza):
     """Pizza tradicional segue estritamente o preço base."""
     def __init__(self, nome: str, tamanho: str, preco_base: float, ingredientes: list):
         super().__init__(nome, tamanho, preco_base, ingredientes)
 
-
-# Subclasse
 class PizzaEspecial(Pizza):
     """Pizza especial possui uma taxa adicional por conta de ingredientes nobres."""
     def __init__(self, nome: str, tamanho: str, preco_base: float, ingredientes: list, taxa_adicional: float = 10.0):
@@ -52,9 +56,10 @@ class PizzaEspecial(Pizza):
     def calcular_preco(self) -> float:
         """Polimorfismo: Sobrescreve o cálculo para incluir a taxa."""
         return self.preco_base + self.taxa_adicional
+```
 
-
-# Classe Pedido
+#### Classe Pedido
+```python
 class Pedido:
     def __init__(self, cliente: Cliente):
         self.cliente = cliente
@@ -88,9 +93,10 @@ class Pedido:
         print("-"*30)
         print(f"VALOR TOTAL: R$ {self.calcular_total():.2f}")
         print("="*30)
+```
 
-
-# Execução
+#### Execução
+```python
 if __name__ == "__main__":
     # 1. Criando o cliente
     cliente1 = Cliente("Rodrigo Silva", "24-99999-9999")
