@@ -2,10 +2,9 @@
 
 - __Descrição:__
 
-O exercício consite em desenvolver uma aplicação front-end moderna e responsiva de um [CRUD](#crud), por meio do framework React Native (React Native for Web). Assim, o design deverá ser composto por uma abordagem limpa, ou seja, utilizando CSS com Flexbox/Grid. 
+O exercício consite em desenvolver uma aplicação front-end moderna e responsiva de um [CRUD](#crud), por meio do framework React Native (React Native for Web).
 
-A aplicação, também, deverá, para ser responsiva, adaptar -se a celulares, tablets e desktops.
-O escopo do exercício será o front-end, ou seja, a aplicação não precisará conter chamadas ao back-end. No entanto, deverão ser comentadas as respectivas chamadas.
+A aplicação, também, deverá, para ser responsiva, adaptar -se a celulares, tablets e desktops. O escopo do exercício será o front-end, ou seja, a aplicação não precisará conter chamadas ao back-end. No entanto, caso necessário, deverão ser comentadas as respectivas chamadas.
 
 A fim de simular um ambiente real de desenvolvimento de software moderno, a aplicação desenvolvida deverá ser hospedada na nuvem gratuita Vercel, utilizando o GitHub como repositório.
 
