@@ -16,18 +16,13 @@ Neste contexto, o exercício 02 consiste em examinar o código-fonte a seguir, d
  - Composição e Associação
 
 ```python
-# ==========================================
-# CLASSE CLIENTE
-# ==========================================
+# Classe Cliente
 class Cliente:
     def __init__(self, nome: str, telefone: str):
         self.nome = nome
         self.telefone = telefone
 
-
-# ==========================================
-# SUPERCLASSE PIZZA (HERANÇA BASE)
-# ==========================================
+# Superclasse Pizza
 class Pizza:
     def __init__(self, nome: str, tamanho: str, preco_base: float, ingredientes: list):
         self.nome = nome
@@ -40,15 +35,14 @@ class Pizza:
         return self.preco_base
 
 
-# ==========================================
-# SUBCLASSES (HERANÇA)
-# ==========================================
+# Subclasse
 class PizzaTradicional(Pizza):
     """Pizza tradicional segue estritamente o preço base."""
     def __init__(self, nome: str, tamanho: str, preco_base: float, ingredientes: list):
         super().__init__(nome, tamanho, preco_base, ingredientes)
 
 
+# Subclasse
 class PizzaEspecial(Pizza):
     """Pizza especial possui uma taxa adicional por conta de ingredientes nobres."""
     def __init__(self, nome: str, tamanho: str, preco_base: float, ingredientes: list, taxa_adicional: float = 10.0):
@@ -60,9 +54,7 @@ class PizzaEspecial(Pizza):
         return self.preco_base + self.taxa_adicional
 
 
-# ==========================================
-# CLASSE PEDIDO
-# ==========================================
+# Classe Pedido
 class Pedido:
     def __init__(self, cliente: Cliente):
         self.cliente = cliente
@@ -98,9 +90,7 @@ class Pedido:
         print("="*30)
 
 
-# ==========================================
-# SIMULAÇÃO DO SISTEMA (TESTE)
-# ==========================================
+# Execução
 if __name__ == "__main__":
     # 1. Criando o cliente
     cliente1 = Cliente("Rodrigo Silva", "24-99999-9999")
