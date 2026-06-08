@@ -13,7 +13,7 @@ O sistema deve ser totalmente acessível e __responsivo__, adaptando-se perfeita
 
 Com base nesse cenário, responda as duas questões a seguir:
 
-1. Questão 01: Sugestão da Arquitetura (Valor: 5,0 pontos)
+1. __Questão 01: Sugestão da Arquitetura__ (Valor: 5,0 pontos)
 
 Desenhe ou descreva detalhadamente a arquitetura lógica desse sistema distribuído. Sua resposta deve abordar obrigatoriamente:
 
@@ -24,7 +24,7 @@ Como a arquitetura garantirá a responsividade das interfaces e a separação de
 Qual estratégia ou protocolo complementar ao HTTP REST tradicional poderia ser adotado para resolver o problema específico da atualização em tempo real da localização do entregador para o cliente, justificando a escolha.
 
 
-2. Questão 02: Tecnologias Envolvidas – Nativos vs. Híbridos (Valor: 5,0 pontos)
+2. __Questão 02: Tecnologias Envolvidas – Nativos vs. Híbridos__ (Valor: 5,0 pontos)
 
 Para a construção dos aplicativos móveis (clientes e entregadores), a equipe de engenharia está em dúvida entre adotar uma abordagem de Desenvolvimento Nativo ou Desenvolvimento Híbrido/Multiplataforma.
 
