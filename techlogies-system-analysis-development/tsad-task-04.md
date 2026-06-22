@@ -10,7 +10,7 @@ implementar um sistema Web visando, de modo prático (hands-on), consolidar os c
 A arquitetura proposta é implementada nas tecnologias:
  - o front-end em HTML/CSS/JS,
  - o back-end em Python FastAPI; e
- - o banco de dadosem SQLite,
+ - o banco de dados em SQLite,
 
 📝 __Descrição:__
 
