@@ -1,6 +1,6 @@
 #### Exercício 04
 
-🔍 __Âmbito:__
+📍​ __Âmbito:__
 Atividade Conceitual: A Arquitetura e a Experiência do CRUD no Universo Mobile
 
 🎯 __Objetivo:__
