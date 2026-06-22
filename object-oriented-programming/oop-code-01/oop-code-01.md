@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 ```
 
 # ==========================================
-# 1. CLASSE CLIENTE
+###### 1. CLASSE CLIENTE
 # ==========================================
 ```
 class Cliente:
@@ -17,7 +17,7 @@ class Cliente:
 ```
 
 # ==========================================
-# 2. ESTRUTURA DE ITENS (HERANÇA E POLIMORFISMO)
+###### 2. ESTRUTURA DE ITENS (HERANÇA E POLIMORFISMO)
 # ==========================================
 ```
 class ItemPedido(ABC):
@@ -76,7 +76,7 @@ class Bebida(ItemPedido):
 ```
 
 # ==========================================
-# 3. CLASSE PEDIDO (COMPOSIÇÃO / ENCAPSULAMENTO)
+###### 3. CLASSE PEDIDO (COMPOSIÇÃO / ENCAPSULAMENTO)
 # ==========================================
 ```
 class Pedido:
@@ -152,7 +152,7 @@ class Pedido:
 ```
 
 # ==========================================
-# 4. FLUXO DE EXECUÇÃO (TESTE DO SISTEMA)
+###### 4. FLUXO DE EXECUÇÃO (TESTE DO SISTEMA)
 # ==========================================
 ```
 if __name__ == "__main__":
