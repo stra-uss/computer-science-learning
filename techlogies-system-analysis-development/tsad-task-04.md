@@ -34,7 +34,7 @@ explique por que o modelo tradicional de requisições HTTP (fetch/REST) utiliza
 
 - 2) Qual seria o protocolo ideal para resolver este problema no ecossistema Python (FastAPI) / JavaScript Vanilla?
  
-💻 __Código-fonte:__
+💻__Código-fonte:__
 
 - __Banco de dados__
   - [SQL DDL de criação de tabelas]()
