@@ -6,7 +6,7 @@ Atividade Conceitual: A Arquitetura e a Experiência do CRUD no Universo Mobile
 🎯 __Objetivo:__
 O objetivo desta atividade é fazer você refletir criticamente sobre como as quatro operações fundamentais do CRUD (Create, Read, Update, Delete) e os conceitos de responsividade se traduzem do ambiente web tradicional para o desenvolvimento de aplicativos móveis (nativos ou híbridos), considerando as limitações e as peculiaridades dos dispositivos móveis.
 
-📝 - __Descrição:__
+📝 __Descrição:__
 Imagine que a aplicação CRUD que você desenvolveu para a web (hospedada na Vercel) precisa ser transformada em um Aplicativo Móvel de grande escala. Em sistemas mobile, a persistência de dados, a interface com o usuário (UI) e a experiência do usuário (UX) seguem premissas diferentes de um navegador desktop.
 
 Com base nos seus conhecimentos teóricos e na experiência prática de desenvolvimento do CRUD web, responda de forma dissertativa aos dois eixos temáticos abaixo:
