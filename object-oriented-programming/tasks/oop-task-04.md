@@ -6,7 +6,7 @@ Atividade Conceitual: No desenvolvimento de sistemas de software, compreender os
 🎯 __Objetivo:__
 O objetivo desta atividade, baseando-se nas atividades práticas anteriores, é conceituar herança, polimorfismo e a realação entre os objetos, a fim de aplicá-los em outros contextos de programação de software.
 
-📝  __Descrição:__
+📝 __Descrição:__
 
   No desenvolvimento de sistemas de software, os pilares da Programação Orientada a Objetos (POO) são aplicados para garantir modularidade, reaproveitamento de código e facilidade de manutenção.
   
