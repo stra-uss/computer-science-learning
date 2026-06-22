@@ -2,9 +2,7 @@
 from abc import ABC, abstractmethod
 ```
 
-# ==========================================
 ###### 1. CLASSE CLIENTE
-# ==========================================
 ```
 class Cliente:
     def __init__(self, nome: str, telefone: str):
@@ -16,9 +14,7 @@ class Cliente:
         self.telefone = telefone
 ```
 
-# ==========================================
 ###### 2. ESTRUTURA DE ITENS (HERANÇA E POLIMORFISMO)
-# ==========================================
 ```
 class ItemPedido(ABC):
     def __init__(self, nome: str, preco_base: float):
@@ -75,9 +71,7 @@ class Bebida(ItemPedido):
         return self.preco_base
 ```
 
-# ==========================================
 ###### 3. CLASSE PEDIDO (COMPOSIÇÃO / ENCAPSULAMENTO)
-# ==========================================
 ```
 class Pedido:
     def __init__(self, cliente: Cliente):
@@ -151,9 +145,7 @@ class Pedido:
         print("="*40 + "\n")
 ```
 
-# ==========================================
 ###### 4. FLUXO DE EXECUÇÃO (TESTE DO SISTEMA)
-# ==========================================
 ```
 if __name__ == "__main__":
     # Instanciando o cliente
