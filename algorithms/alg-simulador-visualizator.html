@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador & Depurador Python - Didática de Algoritmos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Font Inter & Fira Code -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        code: ['Fira Code', 'monospace']
+                    },
+                    colors: {
+                        python: {
+                            blue: '#3b82f6',
+                            yellow: '#eab308',
+                            dark: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .code-line {
+            transition: all 0.2s ease;
+        }
+        .code-line.active {
+            background-color: rgba(234, 179, 8, 0.22);
+            border-left: 4px solid #eab308;
+            font-weight: 600;
+        }
+        .cell-highlight {
+            animation: pulseHighlight 0.5s cubic-bezier(0.4, 0, 0.6, 1);
+        }
+        @keyframes pulseHighlight {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.12); }
+        }
+        .var-card-update {
+            animation: popCard 0.4s ease-out;
+        }
+        @keyframes popCard {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes drawLine {
+            from { stroke-dashoffset: 1; }
+            to { stroke-dashoffset: 0; }
+        }
+        .line-draw {
+            stroke-dasharray: 1;
+            animation: drawLine 0.7s ease-out;
+        }
+        .bar-rect {
+            transition: height 0.55s cubic-bezier(0.34, 1.3, 0.64, 1), box-shadow 0.3s ease, opacity 0.3s ease;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-yellow-500 selection:text-slate-950">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-tr from-blue-600 to-yellow-500 rounded-xl shadow-lg shadow-blue-500/20 text-white font-bold flex items-center justify-center">
+                    <i data-lucide="terminal" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-white flex items-center gap-2">
+                        PythonVis <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">AULAS DE ALGORITMOS</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Simulador de Execução Passo a Passo, Memória e Fluxo de Controle</p>
+                </div>
+            </div>
+
+            <!-- Preset Examples Dropdown -->
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <label for="example-select" class="text-xs font-medium text-slate-400 flex items-center gap-1.5 whitespace-nowrap">
+                    <i data-lucide="book-open" class="w-4 h-4 text-yellow-400"></i> Escolha o Exemplo:
+                </label>
+                <select id="example-select" onchange="loadPreset(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-2 focus:ring-yellow-500 focus:outline-none p-2 w-full md:w-80 font-medium cursor-pointer shadow-sm">
+                    <option value="vars">1. Variáveis e Troca Simples</option>
+                    <option value="vector">2. Vetor (Lista) e Laço For (Soma)</option>
+                    <option value="matrix">3. Matriz (Tabela 2D de Notas)</option>
+                    <option value="game">4. Jogo Interativo: Esquerda/Direita &amp; Ações</option>
+                    <option value="juros">5. Laço While: Poupança com Juros (Linha)</option>
+                    <option value="funcoes">6. Funções: Maior Nota e Média (Barras)</option>
+                    <option value="fibo">7. Sequência de Fibonacci (Linha)</option>
+                    <option value="busca">8. Busca Binária: Dividir para Conquistar</option>
+                    <option value="bubble">9. Bubble Sort: Ordenação Animada (Barras)</option>
+                    <option value="recursao">10. Recursão: Fatorial e Pilha de Chamadas</option>
+                    <option value="hanoi">11. Torre de Hanói (Recursão Clássica)</option>
+                    <option value="heapsort">12. Heapsort: Ordenação com Árvore (Heap)</option>
+                    <option value="dijkstra">13. Dijkstra: Menor Caminho em Grafo</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Left Column: Controls & Code Panel (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- Controls Bar Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col gap-3">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Controles do Depurador
+                    </span>
+                    <span id="status-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-slate-500"></span> Parado
+                    </span>
+                </div>
+
+                <!-- Play/Pause/Step Buttons -->
+                <div class="grid grid-cols-4 gap-2">
+                    <button id="btn-run" onclick="startExecution()" class="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs sm:text-sm py-2.5 px-3 rounded-lg transition-all shadow-lg shadow-emerald-900/20 active:scale-95">
+                        <i data-lucide="play" class="w-4 h-4 fill-current"></i> Rodar
+                    </button>
+                    <button id="btn-pause" onclick="pauseExecution()" disabled class="flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:hover:bg-amber-600 text-white font-medium text-xs sm:text-sm py-2.5 px-3 rounded-lg transition-all active:scale-95">
+                        <i data-lucide="pause" class="w-4 h-4 fill-current"></i> Pausa
+                    </button>
+                    <button id="btn-step" onclick="stepExecution()" class="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs sm:text-sm py-2.5 px-3 rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95">
+                        <i data-lucide="step-forward" class="w-4 h-4"></i> Passo
+                    </button>
+                    <button id="btn-reset" onclick="resetExecution()" class="flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs sm:text-sm py-2.5 px-3 rounded-lg transition-all active:scale-95">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset
+                    </button>
+                </div>
+
+                <!-- Speed Slider -->
+                <div class="flex items-center gap-3 pt-1">
+                    <span class="text-xs font-medium text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                        <i data-lucide="gauge" class="w-3.5 h-3.5"></i> Velocidade:
+                    </span>
+                    <input type="range" id="speed-slider" min="200" max="2000" step="100" value="1000" onchange="updateSpeed(this.value)" class="w-full accent-yellow-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg">
+                    <span id="speed-label" class="text-xs font-mono font-bold text-yellow-400 min-w-[50px] text-right">1.0s</span>
+                </div>
+            </div>
+
+            <!-- Code Editor Container -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl flex-1 flex flex-col min-h-[380px]">
+                <div class="bg-slate-800/80 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="code" class="w-4 h-4 text-blue-400"></i> Editor Python (.py)
+                    </span>
+                    <span class="text-[11px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">Linha: <strong id="current-line-num" class="text-yellow-400">0</strong></span>
+                </div>
+                
+                <!-- Code Lines Display -->
+                <div id="code-container" class="p-3 font-code text-xs sm:text-sm overflow-y-auto flex-1 bg-slate-950 text-slate-300 leading-relaxed select-none">
+                    <!-- Dynamic code injected here -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Visualizer Panels (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-5">
+
+            <!-- Memory & Visual State Panel -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col gap-4 flex-1">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i> Memória RAM &amp; Visualização Didática
+                    </h2>
+                    <span class="text-[11px] text-slate-400 italic">Atualização dinâmica a cada linha</span>
+                </div>
+
+                <!-- 1. Simple Variables Box -->
+                <div id="section-vars" class="flex flex-col gap-2">
+                    <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="box" class="w-3.5 h-3.5 text-blue-400"></i> Variáveis Atuais:
+                    </h3>
+                    <div id="vars-container" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <!-- Dynamic Cards -->
+                    </div>
+                </div>
+
+                <!-- 2. Vector Box (List) -->
+                <div id="section-vector" class="flex flex-col gap-2 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="list" class="w-3.5 h-3.5 text-indigo-400"></i> Lista / Vetor Python (<code id="vector-title-code" class="text-indigo-300 font-mono text-xs">notas = [...]</code>):
+                        </h3>
+                        <span id="vector-action-desc" class="text-[11px] font-mono text-indigo-400 bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/50">Aguardando...</span>
+                    </div>
+                    <div id="vector-container" class="flex items-center justify-start gap-2 sm:gap-3 overflow-x-auto py-2 px-1">
+                        <!-- Dynamic Vector Boxes -->
+                    </div>
+                </div>
+
+                <!-- 3. Matrix Box (2D List) -->
+                <div id="section-matrix" class="flex flex-col gap-2 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="grid" class="w-3.5 h-3.5 text-purple-400"></i> Matriz Python (Lista de Listas):
+                        </h3>
+                        <span id="matrix-action-desc" class="text-[11px] font-mono text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/50">Aguardando...</span>
+                    </div>
+                    <div class="flex justify-center py-2">
+                        <div id="matrix-container" class="grid grid-cols-3 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 shadow-inner">
+                            <!-- Dynamic Matrix Cells -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Game Interactive Stage Box (For Example 4) -->
+                <div id="section-game" class="flex flex-col gap-3 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="gamepad-2" class="w-3.5 h-3.5 text-yellow-400"></i> Palco do Jogo (Fluxo de Controle &amp; Decisões):
+                        </h3>
+                        <span id="game-state-badge" class="text-[11px] font-mono text-yellow-400 bg-yellow-950/60 px-2.5 py-0.5 rounded-full border border-yellow-800/50 font-bold">Início da Aventura</span>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center gap-3 text-center">
+                        <div id="game-story-icon" class="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl text-yellow-400">
+                            <i data-lucide="compass" class="w-8 h-8"></i>
+                        </div>
+                        <p id="game-story-text" class="text-sm text-slate-200 font-medium max-w-md">
+                            O herói está na encruzilhada. Escolha o caminho para testar as estruturas condicionais (if/elif/else).
+                        </p>
+                        <!-- Interactive Choice Buttons in Stage -->
+                        <div id="game-choices-container" class="flex flex-wrap gap-2 justify-center pt-2">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4b. Hanoi Towers -->
+                <div id="section-hanoi" class="flex flex-col gap-2 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="castle" class="w-3.5 h-3.5 text-sky-400"></i> Torre de Hanói (3 Pinos, 3 Discos)
+                        </h3>
+                        <span id="hanoi-action-desc" class="text-[11px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/50">Aguardando...</span>
+                    </div>
+                    <div id="hanoi-container" class="bg-slate-950 rounded-xl border border-slate-800 p-3 shadow-inner flex items-end gap-3"></div>
+                </div>
+
+                <!-- 4c. Heap Tree -->
+                <div id="section-tree" class="flex flex-col gap-2 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="git-fork" class="w-3.5 h-3.5 text-lime-400"></i> O Vetor Visto como Árvore Binária (Heap)
+                        </h3>
+                        <span id="tree-action-desc" class="text-[11px] font-mono text-lime-400 bg-lime-950/60 px-2 py-0.5 rounded border border-lime-800/50">Aguardando...</span>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-3 shadow-inner">
+                        <div id="tree-chart"></div>
+                    </div>
+                </div>
+
+                <!-- 4d. Graph -->
+                <div id="section-graph" class="flex flex-col gap-2 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="network" class="w-3.5 h-3.5 text-fuchsia-400"></i> <span id="graph-title">Grafo</span>
+                        </h3>
+                        <span id="graph-action-desc" class="text-[11px] font-mono text-fuchsia-400 bg-fuchsia-950/60 px-2 py-0.5 rounded border border-fuchsia-800/50">Aguardando...</span>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-3 shadow-inner">
+                        <div id="graph-chart"></div>
+                    </div>
+                </div>
+
+                <!-- 5. Call Stack Box (Recursion) -->
+                <div id="section-stack" class="flex flex-col gap-2 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="layers" class="w-3.5 h-3.5 text-orange-400"></i> Pilha de Chamadas (Call Stack)
+                        </h3>
+                        <span id="stack-action-desc" class="text-[11px] font-mono text-orange-400 bg-orange-950/60 px-2 py-0.5 rounded border border-orange-800/50">Aguardando...</span>
+                    </div>
+                    <div id="stack-container" class="bg-slate-950 rounded-xl border border-slate-800 p-3 shadow-inner flex flex-col gap-2 min-h-[200px] justify-end">
+                        <!-- Dynamic Frames -->
+                    </div>
+                </div>
+
+                <!-- 6. Bar Chart Box -->
+                <div id="section-bar" class="flex flex-col gap-2 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="bar-title">Gráfico de Barras</span>
+                        </h3>
+                        <span id="bar-action-desc" class="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50">Aguardando...</span>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-3 shadow-inner">
+                        <div id="bar-chart"></div>
+                        <div id="bar-legend" class="flex flex-wrap gap-x-4 gap-y-1 mt-3 pt-2 border-t border-slate-800/80 text-[10px] text-slate-400"></div>
+                    </div>
+                </div>
+
+                <!-- 7. Line Chart Box -->
+                <div id="section-line" class="flex flex-col gap-2 hidden border-t border-slate-800/80 pt-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-amber-400"></i> <span id="line-title">Gráfico de Linha</span>
+                        </h3>
+                        <span id="line-action-desc" class="text-[11px] font-mono text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/50">Aguardando...</span>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-3 shadow-inner">
+                        <div id="line-chart"></div>
+                    </div>
+                </div>
+
+                <!-- Pedagogy Tip Box -->
+                <div class="mt-auto bg-slate-950/70 border border-yellow-500/20 rounded-xl p-3.5 flex items-start gap-3">
+                    <div class="p-2 bg-yellow-500/10 rounded-lg text-yellow-400 shrink-0">
+                        <i data-lucide="lightbulb" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-yellow-300 uppercase tracking-wide">Dica Didática do Professor</h4>
+                        <p id="tip-text" class="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                            Observe como o interpretador Python lê linha por linha e armazena os dados na memória RAM.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal / Console Output -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-40">
+                <div class="bg-slate-800/80 px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i> Terminal de Saída (print)
+                    </span>
+                    <button onclick="clearConsole()" class="text-[11px] text-slate-400 hover:text-slate-200 transition-colors">Limpar</button>
+                </div>
+                <div id="console-output" class="p-3 font-code text-xs sm:text-sm text-emerald-400 bg-slate-950 flex-1 overflow-y-auto space-y-1">
+                    <div class="text-slate-600 italic">&gt;&gt;&gt; # O console Python aguarda a execução...</div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-3 text-center text-xs text-slate-500">
+        <p>Ambiente Lúdico de Programação Python para Professores e Alunos | Visualizador de Algoritmos &amp; Fluxo de Controle</p>
+        <p class="mt-1">Prof. Strauss</p>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        const PRESETS = {
+            vars: {
+                title: "1. Variáveis e Troca Simples",
+                tip: "Em Python, variáveis são referências a objetos na memória. Veja como criamos 'a', 'b' e usamos uma variável 'temp' para trocar seus valores sem perder dados!",
+                code: [
+                    "# Atribuição de valores iniciais",
+                    "a = 15",
+                    "b = 30",
+                    "print(f'Antes da troca: a = {a}, b = {b}')",
+                    "",
+                    "# Algoritmo de troca (swap) usando temporário",
+                    "temp = a",
+                    "a = b",
+                    "b = temp",
+                    "",
+                    "print(f'Depois da troca: a = {a}, b = {b}')"
+                ],
+                initialVars: { a: 0, b: 0, temp: "None" },
+                hasVector: false,
+                hasMatrix: false,
+                hasGame: false,
+                steps: [
+                    { line: 2, vars: { a: 15 }, highlightVar: 'a', log: null },
+                    { line: 3, vars: { b: 30 }, highlightVar: 'b', log: null },
+                    { line: 4, log: "Antes da troca: a = 15, b = 30\n" },
+                    { line: 7, vars: { temp: 15 }, highlightVar: 'temp', log: null },
+                    { line: 8, vars: { a: 30 }, highlightVar: 'a', log: null },
+                    { line: 9, vars: { b: 15 }, highlightVar: 'b', log: null },
+                    { line: 11, log: "Depois da troca: a = 30, b = 15\n" }
+                ]
+            },
+            vector: {
+                title: "2. Vetor (Lista) e Laço For (Soma)",
+                tip: "Listas em Python funcionam como vetores sequenciais. O laço 'for nota in notas' percorre cada elemento da lista automaticamente, acumulando na variável 'soma'.",
+                code: [
+                    "# Criando uma lista (vetor) de notas",
+                    "notas = [7.5, 8.0, 6.0, 9.5]",
+                    "soma = 0.0",
+                    "",
+                    "# Percorrendo cada nota com o laço for",
+                    "for i in range(4):",
+                    "    soma = soma + notas[i]",
+                    "    print(f'Adicionada nota {notas[i]}, soma parcial: {soma}')",
+                    "",
+                    "media = soma / 4",
+                    "print(f'Média Final da Turma = {media}')"
+                ],
+                initialVars: { soma: 0.0, i: 0, media: 0.0 },
+                hasVector: true,
+                vectorData: [7.5, 8.0, 6.0, 9.5],
+                hasMatrix: false,
+                hasGame: false,
+                steps: [
+                    { line: 2, vector: [7.5, 8.0, 6.0, 9.5], log: null },
+                    { line: 3, vars: { soma: 0.0 }, highlightVar: 'soma', log: null },
+                    // i = 0
+                    { line: 6, vars: { i: 0 }, activeIndex: 0, vectorDesc: "Índice i=0 -> nota 7.5" },
+                    { line: 7, vars: { soma: 7.5 }, activeIndex: 0, highlightVar: 'soma', vectorDesc: "soma = 0.0 + 7.5" },
+                    { line: 8, log: "Adicionada nota 7.5, soma parcial: 7.5\n" },
+                    // i = 1
+                    { line: 6, vars: { i: 1 }, activeIndex: 1, vectorDesc: "Índice i=1 -> nota 8.0" },
+                    { line: 7, vars: { soma: 15.5 }, activeIndex: 1, highlightVar: 'soma', vectorDesc: "soma = 7.5 + 8.0" },
+                    { line: 8, log: "Adicionada nota 8.0, soma parcial: 15.5\n" },
+                    // i = 2
+                    { line: 6, vars: { i: 2 }, activeIndex: 2, vectorDesc: "Índice i=2 -> nota 6.0" },
+                    { line: 7, vars: { soma: 21.5 }, activeIndex: 2, highlightVar: 'soma', vectorDesc: "soma = 15.5 + 6.0" },
+                    { line: 8, log: "Adicionada nota 6.0, soma parcial: 21.5\n" },
+                    // i = 3
+                    { line: 6, vars: { i: 3 }, activeIndex: 3, vectorDesc: "Índice i=3 -> nota 9.5" },
+                    { line: 7, vars: { soma: 31.0 }, activeIndex: 3, highlightVar: 'soma', vectorDesc: "soma = 21.5 + 9.5" },
+                    { line: 8, log: "Adicionada nota 9.5, soma parcial: 31.0\n" },
+                    // Calc media
+                    { line: 10, vars: { media: 7.75 }, highlightVar: 'media', activeIndex: -1, log: null },
+                    { line: 11, log: "Média Final da Turma = 7.75\n" }
+                ]
+            },
+            matrix: {
+                title: "3. Matriz (Tabela 2D de Notas)",
+                tip: "Uma matriz em Python é uma lista dentro de outra lista (linhas e colunas). Usamos dois laços 'for' aninhados (linha e coluna) para percorrer cada célula [i][j].",
+                code: [
+                    "# Matriz 2x2 de Notas (2 alunos, 2 bimestres)",
+                    "matriz = [",
+                    "    [8.0, 9.0],",
+                    "    [6.5, 7.5]",
+                    "]",
+                    "i = 0",
+                    "j = 0",
+                    "",
+                    "for i in range(2):",
+                    "    for j in range(2):",
+                    "        print(f'Nota Aluno {i}, Bimestre {j} = {matriz[i][j]}')"
+                ],
+                initialVars: { i: 0, j: 0 },
+                hasVector: false,
+                hasMatrix: true,
+                hasGame: false,
+                steps: (function() {
+                    let st = [];
+                    st.push({ line: 2, vars: { i: 0, j: 0 } });
+                    let grid = [
+                        [8.0, 9.0],
+                        [6.5, 7.5]
+                    ];
+                    for(let r = 0; r < 2; r++) {
+                        st.push({ line: 9, vars: { i: r } });
+                        for(let c = 0; c < 2; c++) {
+                            st.push({ 
+                                line: 10, 
+                                vars: { j: c }, 
+                                activeCell: [r, c], 
+                                matrixData: grid,
+                                matrixDesc: `Acessando Linha ${r}, Coluna ${c}` 
+                            });
+                            st.push({ 
+                                line: 11, 
+                                activeCell: [r, c], 
+                                matrixData: grid, 
+                                log: `Nota Aluno ${r}, Bimestre ${c} = ${grid[r][c]}\n`,
+                                matrixDesc: `Lido elemento matriz[${r}][${c}]` 
+                            });
+                        }
+                    }
+                    return st;
+                })()
+            },
+            game: {
+                title: "4. Jogo Interativo: Esquerda/Direita & Ações",
+                tip: "Excelente para ensinar Fluxo de Controle com condicionais aninhadas (if, elif, else) e tomada de decisões em tempo de execução!",
+                code: [
+                    "# Jogo de Aventura em Python",
+                    "print('Bem-vindo à Floresta Mágica!')",
+                    "escolha1 = 'esquerda'  # Simulando escolha",
+                    "",
+                    "if escolha1 == 'esquerda':",
+                    "    print('Você encontrou um monstro selvagem!')",
+                    "    acao = 'atacar'      # Opções: atacar, driblar, voltar",
+                    "    ",
+                    "    if acao == 'atacar':",
+                    "        print('Você venceu o monstro e achou um tesouro!')",
+                    "    elif acao == 'driblar':",
+                    "        print('Você driblou o monstro com estilo e fugiu!')",
+                    "    else:",
+                    "        print('Você correu de volta para o início.')",
+                    "else:",
+                    "    print('Caminho seguro, mas sem tesouros. Fim de jogo!')"
+                ],
+                initialVars: { escolha1: "None", acao: "None" },
+                hasVector: false,
+                hasMatrix: false,
+                hasGame: true,
+                steps: [
+                    { line: 2, log: "Bem-vindo à Floresta Mágica!\n" },
+                    { line: 3, vars: { escolha1: 'esquerda' }, highlightVar: 'escolha1', log: "Decisão do Jogador: Escolheu 'esquerda'\n" },
+                    { line: 5, log: "Você encontrou um monstro selvagem!\n" },
+                    { line: 6, vars: { acao: 'atacar' }, highlightVar: 'acao', log: "Ação escolhida: 'atacar'\n" },
+                    { line: 8, log: "Você venceu o monstro e achou um tesouro!\n" }
+                ]
+            },
+            juros: {
+                title: "5. Laço While: Poupança com Juros (Linha)",
+                tip: "O laço 'while' repete ENQUANTO a condição for verdadeira. Aqui o saldo cresce mês a mês e o gráfico de linha mostra os juros compostos: o dinheiro rende em cima do que já rendeu, por isso a curva fica cada vez mais inclinada!",
+                code: [
+                    "# Poupança: R$ 1000 rendendo 10% ao mês",
+                    "saldo = 1000.0",
+                    "taxa = 0.10",
+                    "mes = 0",
+                    "",
+                    "while mes < 6:",
+                    "    saldo = saldo * (1 + taxa)",
+                    "    mes = mes + 1",
+                    "    print(f'Mês {mes}: saldo = R$ {saldo:.2f}')",
+                    "",
+                    "print(f'Saldo final: R$ {saldo:.2f}')"
+                ],
+                initialVars: { saldo: 0.0, taxa: 0.0, mes: 0 },
+                hasVector: false,
+                hasMatrix: false,
+                hasGame: false,
+                hasLine: true,
+                lineInit: {
+                    title: "Crescimento do Saldo (R$) a cada mês",
+                    xLabel: "Mês", yLabel: "Saldo (R$)",
+                    xMin: 0, xMax: 6, xStep: 1,
+                    yMin: 900, yMax: 1850, yTicks: [1000, 1200, 1400, 1600, 1800],
+                    color: "#eab308", color2: "#38bdf8",
+                    tickFmt: v => v, pointFmt: v => v.toFixed(0)
+                },
+                steps: (function() {
+                    const r2 = v => Math.round(v * 100) / 100;
+                    let st = [];
+                    let saldo = 1000, mes = 0;
+                    st.push({ line: 2, vars: { saldo: 1000 }, highlightVar: 'saldo', lineDesc: "saldo inicial = R$ 1000" });
+                    st.push({ line: 3, vars: { taxa: 0.1 }, highlightVar: 'taxa', lineDesc: "taxa = 10% ao mês" });
+                    st.push({ line: 4, vars: { mes: 0 }, highlightVar: 'mes', linePoint: { x: 0, y: 1000 }, lineDesc: "Mês 0: R$ 1000.00" });
+                    while (mes < 6) {
+                        st.push({ line: 6, lineDesc: `mes (${mes}) < 6 ? Sim → repete` });
+                        const antes = saldo;
+                        saldo = saldo * 1.1;
+                        st.push({ line: 7, vars: { saldo: r2(saldo) }, highlightVar: 'saldo', lineDesc: `saldo = ${r2(antes)} × 1.10` });
+                        mes++;
+                        st.push({ line: 8, vars: { mes: mes }, highlightVar: 'mes', lineDesc: `mes = ${mes}` });
+                        st.push({ line: 9, log: `Mês ${mes}: saldo = R$ ${saldo.toFixed(2)}\n`, linePoint: { x: mes, y: saldo }, lineDesc: `Mês ${mes}: R$ ${saldo.toFixed(2)}` });
+                    }
+                    st.push({ line: 6, lineDesc: "mes (6) < 6 ? Não → sai do laço" });
+                    st.push({ line: 11, log: `Saldo final: R$ ${saldo.toFixed(2)}\n`, lineDesc: `Saldo final: R$ ${saldo.toFixed(2)}` });
+                    return st;
+                })()
+            },
+            funcoes: {
+                title: "6. Funções: Maior Nota e Média (Barras)",
+                tip: "Uma função (def) é uma receita reutilizável: recebe dados, processa e devolve um resultado com 'return'. Veja que as variáveis locais 'm' e 'n' desaparecem quando a função termina. A linha tracejada azul mostra a média da turma!",
+                code: [
+                    "# Funções que analisam as notas da turma",
+                    "def maior(lista):",
+                    "    m = lista[0]",
+                    "    for n in lista:",
+                    "        if n > m:",
+                    "            m = n",
+                    "    return m",
+                    "",
+                    "notas = [6.5, 9.0, 4.5, 8.0, 7.0]",
+                    "topo = maior(notas)",
+                    "print(f'Maior nota: {topo}')",
+                    "media = sum(notas) / len(notas)",
+                    "print(f'Média da turma: {media}')"
+                ],
+                initialVars: { topo: 0, media: 0.0, m: "—", n: "—" },
+                hasVector: false,
+                hasMatrix: false,
+                hasGame: false,
+                hasBar: true,
+                barInit: {
+                    title: "Notas da Turma (Gráfico de Barras)",
+                    labels: ["Ana", "Bia", "Caio", "Duda", "Edu"],
+                    subs: ["[0]", "[1]", "[2]", "[3]", "[4]"],
+                    values: [6.5, 9.0, 4.5, 8.0, 7.0],
+                    yMax: 10, ticks: [0, 2, 4, 6, 8, 10], decimals: 1,
+                    legend: [
+                        { k: 'base', t: 'nota' },
+                        { k: 'active', t: 'n (sendo comparada)' },
+                        { k: 'max', t: 'm (maior até agora)' },
+                        { k: 'avg', t: 'média da turma' }
+                    ]
+                },
+                steps: (function() {
+                    const notas = [6.5, 9.0, 4.5, 8.0, 7.0];
+                    const f1 = v => Number(v).toFixed(1);
+                    let st = [];
+                    st.push({ line: 9, barValues: notas, barDesc: "notas = [6.5, 9.0, 4.5, 8.0, 7.0]" });
+                    st.push({ line: 10, barDesc: "Chamando maior(notas): a lista entra na função" });
+                    let m = notas[0], mi = 0;
+                    st.push({ line: 3, vars: { m: f1(m) }, highlightVar: 'm', barHL: { 0: 'max' }, barDesc: `m = lista[0] → começa com ${f1(m)}` });
+                    notas.forEach((n, i) => {
+                        const hl = {};
+                        hl[mi] = 'max';
+                        if (i !== mi) hl[i] = 'active';
+                        st.push({ line: 4, vars: { n: f1(n) }, highlightVar: 'n', barHL: hl, barDesc: `n = ${f1(n)} (posição ${i})` });
+                        const bigger = n > m;
+                        st.push({ line: 5, barHL: hl, barDesc: `${f1(n)} > ${f1(m)} ? ${bigger ? 'Sim' : 'Não'}` });
+                        if (bigger) {
+                            m = n; mi = i;
+                            st.push({ line: 6, vars: { m: f1(m) }, highlightVar: 'm', barHL: { [i]: 'max' }, barDesc: `Novo maior: m = ${f1(m)}` });
+                        }
+                    });
+                    st.push({ line: 7, barHL: { [mi]: 'max' }, barDesc: `return ${f1(m)}` });
+                    st.push({ line: 10, vars: { topo: f1(m), m: "—", n: "—" }, highlightVar: 'topo', barHL: { [mi]: 'max' }, barDesc: `topo = ${f1(m)} (m e n sumiram!)` });
+                    st.push({ line: 11, barHL: { [mi]: 'max' }, log: `Maior nota: ${f1(m)}\n`, barDesc: `Maior nota: ${f1(m)}` });
+                    const soma = notas.reduce((a, b) => a + b, 0);
+                    const media = soma / notas.length;
+                    st.push({ line: 12, vars: { media: f1(media) }, highlightVar: 'media', barAvg: media, barHL: { [mi]: 'max' }, barDesc: `média = ${f1(soma)} / ${notas.length} = ${f1(media)}` });
+                    st.push({ line: 13, barHL: { [mi]: 'max' }, log: `Média da turma: ${f1(media)}\n`, barDesc: `Média da turma: ${f1(media)}` });
+                    return st;
+                })()
+            },
+            fibo: {
+                title: "7. Sequência de Fibonacci (Linha)",
+                tip: "Na sequência de Fibonacci cada termo é a soma dos dois anteriores. A lista cresce com append() e o gráfico de linha mostra o crescimento explosivo! Repare: a razão entre termos vizinhos se aproxima de 1,618, a famosa razão áurea.",
+                code: [
+                    "# Fibonacci: cada termo = soma dos 2 anteriores",
+                    "fib = [0, 1]",
+                    "",
+                    "for i in range(2, 10):",
+                    "    proximo = fib[i - 1] + fib[i - 2]",
+                    "    fib.append(proximo)",
+                    "    print(f'F({i}) = {proximo}')",
+                    "",
+                    "razao = fib[9] / fib[8]",
+                    "print(f'Razão áurea ≈ {razao:.3f}')"
+                ],
+                initialVars: { i: 0, proximo: 0, razao: 0.0 },
+                hasVector: true,
+                vectorName: "fib",
+                vectorMarkers: true,
+                vectorData: [],
+                hasMatrix: false,
+                hasGame: false,
+                hasLine: true,
+                lineInit: {
+                    title: "Valor de F(i) na Sequência de Fibonacci",
+                    xLabel: "i (posição na sequência)", yLabel: "F(i)",
+                    xMin: 0, xMax: 9, xStep: 1,
+                    yMin: 0, yMax: 40, yTicks: [0, 10, 20, 30, 40],
+                    color: "#a855f7", color2: "#22d3ee",
+                    tickFmt: v => v, pointFmt: v => v
+                },
+                steps: (function() {
+                    let st = [];
+                    let fib = [0, 1];
+                    st.push({ line: 2, vector: [0, 1], vectorDesc: "fib = [0, 1]", linePoints: [{ x: 0, y: 0 }, { x: 1, y: 1 }], lineDesc: "Pontos iniciais: F(0)=0 e F(1)=1" });
+                    for (let i = 2; i < 10; i++) {
+                        st.push({ line: 4, vars: { i: i }, highlightVar: 'i', vectorDesc: `i = ${i}`, lineDesc: `Calculando F(${i})` });
+                        const a = fib[i - 1], b = fib[i - 2];
+                        const prox = a + b;
+                        st.push({
+                            line: 5, vars: { proximo: prox }, highlightVar: 'proximo',
+                            kinds: { [i - 1]: 'mid', [i - 2]: 'mid' },
+                            markers: { [i - 2]: 'i-2', [i - 1]: 'i-1' },
+                            vectorDesc: `${b} + ${a} = ${prox}`, lineDesc: `${b} + ${a} = ${prox}`
+                        });
+                        fib.push(prox);
+                        st.push({ line: 6, vector: [...fib], activeIndex: i, vectorDesc: `append(${prox})`, linePoint: { x: i, y: prox }, lineDesc: `Novo ponto: F(${i}) = ${prox}` });
+                        st.push({ line: 7, log: `F(${i}) = ${prox}\n`, activeIndex: i, vectorDesc: `F(${i}) = ${prox}`, lineDesc: `F(${i}) = ${prox}` });
+                    }
+                    const razao = fib[9] / fib[8];
+                    st.push({
+                        line: 9, vars: { razao: razao.toFixed(3) }, highlightVar: 'razao',
+                        kinds: { 9: 'mid', 8: 'mid' }, markers: { 8: 'fib[8]', 9: 'fib[9]' },
+                        vectorDesc: `${fib[9]} / ${fib[8]} = ${razao.toFixed(3)}`, lineDesc: `Razão = ${razao.toFixed(3)}`
+                    });
+                    st.push({ line: 10, log: `Razão áurea ≈ ${razao.toFixed(3)}\n`, vectorDesc: "Perto de 1.618!", lineDesc: "Razão áurea ≈ 1.618" });
+                    return st;
+                })()
+            },
+            busca: {
+                title: "8. Busca Binária: Dividir para Conquistar",
+                tip: "Em vez de olhar item por item, a busca binária olha o MEIO da lista ordenada e descarta metade a cada passo. Os números apagados já foram eliminados! Em 1 milhão de itens, bastam cerca de 20 comparações.",
+                code: [
+                    "# Busca Binária: a lista precisa estar ORDENADA",
+                    "numeros = [3, 8, 12, 17, 23, 31, 42, 56]",
+                    "alvo = 42",
+                    "inicio = 0",
+                    "fim = len(numeros) - 1",
+                    "",
+                    "while inicio <= fim:",
+                    "    meio = (inicio + fim) // 2",
+                    "    if numeros[meio] == alvo:",
+                    "        print(f'Achei {alvo} na posição {meio}!')",
+                    "        break",
+                    "    elif numeros[meio] < alvo:",
+                    "        inicio = meio + 1",
+                    "    else:",
+                    "        fim = meio - 1"
+                ],
+                initialVars: { alvo: 0, inicio: 0, fim: 0, meio: "—" },
+                hasVector: true,
+                vectorName: "numeros",
+                vectorMarkers: true,
+                vectorData: [3, 8, 12, 17, 23, 31, 42, 56],
+                hasMatrix: false,
+                hasGame: false,
+                steps: (function() {
+                    const arr = [3, 8, 12, 17, 23, 31, 42, 56];
+                    const alvo = 42;
+                    let ini = 0, fim = arr.length - 1;
+                    let st = [];
+                    const view = (ini, fim, meio, found) => {
+                        const kinds = {}, markers = {};
+                        const addM = (idx, t) => { markers[idx] = markers[idx] ? markers[idx] + '/' + t : t; };
+                        arr.forEach((_, idx) => { if (idx < ini || idx > fim) kinds[idx] = 'dim'; });
+                        addM(ini, 'ini');
+                        if (meio !== null) { addM(meio, 'meio'); kinds[meio] = found ? 'found' : 'mid'; }
+                        addM(fim, 'fim');
+                        return { kinds, markers };
+                    };
+                    st.push({ line: 2, vector: arr, vectorDesc: "Lista ordenada de 8 números" });
+                    st.push({ line: 3, vars: { alvo: alvo }, highlightVar: 'alvo', vectorDesc: `Procurando o ${alvo}` });
+                    st.push({ line: 4, vars: { inicio: 0 }, highlightVar: 'inicio', vectorDesc: "inicio = 0", ...view(0, fim, null) });
+                    st.push({ line: 5, vars: { fim: fim }, highlightVar: 'fim', vectorDesc: `fim = ${fim}`, ...view(0, fim, null) });
+                    let passo = 0;
+                    while (ini <= fim) {
+                        passo++;
+                        st.push({ line: 7, vectorDesc: `inicio(${ini}) <= fim(${fim}) ? Sim`, ...view(ini, fim, null) });
+                        const meio = Math.floor((ini + fim) / 2);
+                        st.push({ line: 8, vars: { meio: meio }, highlightVar: 'meio', vectorDesc: `meio = (${ini} + ${fim}) // 2 = ${meio}`, ...view(ini, fim, meio) });
+                        const achou = arr[meio] === alvo;
+                        st.push({ line: 9, vectorDesc: `numeros[${meio}] = ${arr[meio]} == ${alvo} ? ${achou ? 'Sim!' : 'Não'}`, ...view(ini, fim, meio, achou) });
+                        if (achou) {
+                            st.push({ line: 10, log: `Achei ${alvo} na posição ${meio}!\n`, vectorDesc: `Encontrado em ${passo} passos!`, ...view(ini, fim, meio, true) });
+                            st.push({ line: 11, vectorDesc: "break: sai do laço", ...view(ini, fim, meio, true) });
+                            break;
+                        }
+                        const menor = arr[meio] < alvo;
+                        st.push({ line: 12, vectorDesc: `${arr[meio]} < ${alvo} ? ${menor ? 'Sim → alvo está à direita' : 'Não → alvo está à esquerda'}`, ...view(ini, fim, meio) });
+                        if (menor) {
+                            ini = meio + 1;
+                            st.push({ line: 13, vars: { inicio: ini }, highlightVar: 'inicio', vectorDesc: `inicio = ${ini}: descarta a metade esquerda`, ...view(ini, fim, null) });
+                        } else {
+                            fim = meio - 1;
+                            st.push({ line: 15, vars: { fim: fim }, highlightVar: 'fim', vectorDesc: `fim = ${fim}: descarta a metade direita`, ...view(ini, fim, null) });
+                        }
+                    }
+                    return st;
+                })()
+            },
+            bubble: {
+                title: "9. Bubble Sort: Ordenação Animada (Barras)",
+                tip: "O Bubble Sort compara vizinhos e troca se estiverem fora de ordem, usando a mesma 'temp' do Exemplo 1! A cada passada, o maior valor 'flutua' como uma bolha até o final (barras verdes = já ordenadas). Repare como valores repetidos aparecem durante a troca.",
+                code: [
+                    "# Bubble Sort: os maiores 'flutuam' para o fim",
+                    "valores = [7, 3, 9, 2, 6, 4]",
+                    "n = len(valores)",
+                    "",
+                    "for i in range(n - 1):",
+                    "    for j in range(n - 1 - i):",
+                    "        if valores[j] > valores[j + 1]:",
+                    "            temp = valores[j]",
+                    "            valores[j] = valores[j + 1]",
+                    "            valores[j + 1] = temp",
+                    "",
+                    "print(f'Lista ordenada: {valores}')"
+                ],
+                initialVars: { n: 0, i: 0, j: 0, temp: "—" },
+                hasVector: true,
+                vectorName: "valores",
+                vectorData: [7, 3, 9, 2, 6, 4],
+                hasMatrix: false,
+                hasGame: false,
+                hasBar: true,
+                barInit: {
+                    title: "Barras Dançando até a Ordem Crescente",
+                    labels: ["[0]", "[1]", "[2]", "[3]", "[4]", "[5]"],
+                    values: [7, 3, 9, 2, 6, 4],
+                    yMax: 10, ticks: [0, 5, 10],
+                    legend: [
+                        { k: 'base', t: 'aguardando' },
+                        { k: 'active', t: 'comparando' },
+                        { k: 'swap', t: 'trocando' },
+                        { k: 'sorted', t: 'já no lugar certo' }
+                    ]
+                },
+                steps: (function() {
+                    let v = [7, 3, 9, 2, 6, 4];
+                    const n = v.length;
+                    let st = [];
+                    let done = [];
+                    const S = (line, extra, desc, rest) => {
+                        const k = {};
+                        done.forEach(d => { k[d] = 'sorted'; });
+                        Object.assign(k, extra || {});
+                        st.push(Object.assign({ line: line, vector: [...v], barValues: [...v], kinds: k, barHL: k, vectorDesc: desc, barDesc: desc }, rest || {}));
+                    };
+                    S(2, {}, "valores = [7, 3, 9, 2, 6, 4]");
+                    S(3, {}, "n = 6 elementos", { vars: { n: n }, highlightVar: 'n' });
+                    for (let i = 0; i < n - 1; i++) {
+                        S(5, {}, `Passada ${i + 1}: comparar até a posição ${n - 1 - i}`, { vars: { i: i }, highlightVar: 'i' });
+                        for (let j = 0; j < n - 1 - i; j++) {
+                            S(6, { [j]: 'active', [j + 1]: 'active' }, `j = ${j}: olhando posições ${j} e ${j + 1}`, { vars: { j: j }, highlightVar: 'j' });
+                            const sw = v[j] > v[j + 1];
+                            S(7, { [j]: 'active', [j + 1]: 'active' }, `${v[j]} > ${v[j + 1]} ? ${sw ? 'Sim → trocar' : 'Não → mantém'}`);
+                            if (sw) {
+                                const t = v[j];
+                                S(8, { [j]: 'swap' }, `temp = ${t} (guardamos o valor)`, { vars: { temp: t }, highlightVar: 'temp' });
+                                v[j] = v[j + 1];
+                                S(9, { [j]: 'swap', [j + 1]: 'swap' }, `valores[${j}] recebe ${v[j]}`);
+                                v[j + 1] = t;
+                                S(10, { [j]: 'swap', [j + 1]: 'swap' }, `valores[${j + 1}] recebe temp (${t}). Trocou!`);
+                            }
+                        }
+                        done.push(n - 1 - i);
+                    }
+                    done.push(0);
+                    S(12, {}, "Tudo ordenado!", { log: `Lista ordenada: [${v.join(', ')}]\n` });
+                    return st;
+                })()
+            },
+            recursao: {
+                title: "10. Recursão: Fatorial e Pilha de Chamadas",
+                tip: "Recursão é quando uma função chama a si mesma! Cada chamada vira um 'andar' novo na pilha e fica esperando a de cima terminar. Tudo para no CASO BASE (n <= 1); depois as respostas voltam, andar por andar, multiplicando até formar 4! = 24.",
+                code: [
+                    "# Recursão: uma função que chama a si mesma",
+                    "def fatorial(n):",
+                    "    if n <= 1:",
+                    "        return 1",
+                    "    return n * fatorial(n - 1)",
+                    "",
+                    "resultado = fatorial(4)",
+                    "print(f'4! = {resultado}')"
+                ],
+                initialVars: { n: "—", resultado: "—" },
+                hasVector: false,
+                hasMatrix: false,
+                hasGame: false,
+                hasStack: true,
+                hasBar: true,
+                barInit: {
+                    title: "Valor Devolvido (return) por Cada Chamada",
+                    labels: ["fatorial(1)", "fatorial(2)", "fatorial(3)", "fatorial(4)"],
+                    values: [null, null, null, null],
+                    yMax: 30, ticks: [0, 10, 20, 30],
+                    legend: [
+                        { k: 'active', t: 'valor devolvido agora' },
+                        { k: 'sorted', t: 'já devolvido' }
+                    ]
+                },
+                steps: (function() {
+                    const N = 4;
+                    let st = [];
+                    let vals = [null, null, null, null];
+                    // monta a pilha do fundo (N) até o topo (k)
+                    const mk = (k, topState, topNote) => {
+                        const fr = [];
+                        for (let d = N; d >= k; d--) {
+                            if (d === k) fr.push({ name: `fatorial(${d})`, state: topState, note: topNote });
+                            else fr.push({ name: `fatorial(${d})`, state: 'wait', note: `espera fatorial(${d - 1}) responder...` });
+                        }
+                        return fr;
+                    };
+                    const hlBars = (latest) => {
+                        const h = {};
+                        vals.forEach((v, i) => { if (v !== null) h[i] = 'sorted'; });
+                        if (latest !== undefined) h[latest] = 'active';
+                        return h;
+                    };
+                    st.push({ line: 7, vars: { n: N }, highlightVar: 'n', stack: mk(N, 'active', 'chamada inicial'), stackDesc: `Chamando fatorial(${N})`, barHL: {}, barDesc: "Nenhuma chamada respondeu ainda" });
+                    for (let k = N; k > 1; k--) {
+                        st.push({ line: 3, vars: { n: k }, highlightVar: 'n', stack: mk(k, 'active', `${k} <= 1 ? Não`), stackDesc: `n = ${k}: ainda não é o caso base`, barHL: {}, barDesc: "Descendo a pilha..." });
+                        st.push({ line: 5, vars: { n: k - 1 }, highlightVar: 'n', stack: mk(k - 1, 'active', 'nova chamada'), stackDesc: `fatorial(${k}) chama fatorial(${k - 1}) e espera`, barHL: {}, barDesc: "Descendo a pilha..." });
+                    }
+                    st.push({ line: 3, vars: { n: 1 }, highlightVar: 'n', stack: mk(1, 'active', '1 <= 1 ? Sim → CASO BASE'), stackDesc: "Chegamos ao caso base!", barHL: {}, barDesc: "Caso base encontrado" });
+                    vals[0] = 1;
+                    st.push({ line: 4, stack: mk(1, 'ret', 'return 1'), stackDesc: "fatorial(1) devolve 1 e sai da pilha", barValues: [...vals], barHL: hlBars(0), barDesc: "fatorial(1) = 1" });
+                    let prev = 1;
+                    for (let k = 2; k <= N; k++) {
+                        const val = k * prev;
+                        vals[k - 1] = val;
+                        st.push({ line: 5, vars: { n: k }, highlightVar: 'n', stack: mk(k, 'ret', `return ${k} × ${prev} = ${val}`), stackDesc: `fatorial(${k}) recebeu ${prev} e devolve ${val}`, barValues: [...vals], barHL: hlBars(k - 1), barDesc: `fatorial(${k}) = ${val}` });
+                        prev = val;
+                    }
+                    st.push({ line: 7, vars: { resultado: prev, n: "—" }, highlightVar: 'resultado', stack: [], stackDesc: `Pilha vazia! resultado = ${prev}`, barHL: hlBars(N - 1), barDesc: `resultado = ${prev}` });
+                    st.push({ line: 8, log: `4! = ${prev}\n`, stackDesc: "Fim do programa", barHL: hlBars(N - 1), barDesc: `4! = ${prev}` });
+                    return st;
+                })()
+            },
+            hanoi: {
+                title: "11. Torre de Hanói (Recursão Clássica)",
+                tip: "Regra do jogo: mova um disco por vez e nunca ponha um maior sobre um menor. O truque recursivo: para mover n discos, mova n-1 para o pino auxiliar, mova o maior para o destino e traga os n-1 de volta por cima. Com 3 discos são 2³ − 1 = 7 movimentos!",
+                code: [
+                    "# Torre de Hanói: mover os discos de A para C",
+                    "def hanoi(n, origem, destino, auxiliar):",
+                    "    if n == 1:",
+                    "        print(f'Mova disco 1 de {origem} para {destino}')",
+                    "        return",
+                    "    hanoi(n - 1, origem, auxiliar, destino)",
+                    "    print(f'Mova disco {n} de {origem} para {destino}')",
+                    "    hanoi(n - 1, auxiliar, destino, origem)",
+                    "",
+                    "hanoi(3, 'A', 'C', 'B')"
+                ],
+                initialVars: { n: 0, origem: "—", destino: "—", auxiliar: "—" },
+                hasVector: false,
+                hasMatrix: false,
+                hasGame: false,
+                hasHanoi: true,
+                hasStack: true,
+                hanoiInit: { pegs: [[3, 2, 1], [], []] },
+                steps: (function() {
+                    const N = 3;
+                    const pegs = { A: [3, 2, 1], B: [], C: [] };
+                    const names = ['A', 'B', 'C'];
+                    let st = [], stack = [], moves = 0;
+                    const snap = () => names.map(k => [...pegs[k]]);
+                    const frames = note => stack.map((f, i) => ({
+                        name: `hanoi(${f.n}, '${f.o}', '${f.d}', '${f.a}')`,
+                        state: i === stack.length - 1 ? 'active' : 'wait',
+                        note: i === stack.length - 1 ? note : f.wait
+                    }));
+                    const S = (line, note, desc, rest) => {
+                        const f = stack[stack.length - 1];
+                        st.push(Object.assign({
+                            line: line,
+                            vars: { n: f.n, origem: `'${f.o}'`, destino: `'${f.d}'`, auxiliar: `'${f.a}'` },
+                            pegs: snap(), stack: frames(note), stackDesc: desc, hanoiDesc: desc
+                        }, rest || {}));
+                    };
+                    const move = (from, to) => { pegs[to].push(pegs[from].pop()); moves++; };
+                    function hanoi(n, o, d, a, callLine, why) {
+                        stack.push({ n: n, o: o, d: d, a: a, wait: '' });
+                        S(callLine, 'chamada', why);
+                        S(3, n === 1 ? 'n == 1 ? Sim → caso base' : 'n == 1 ? Não', n === 1 ? "n = 1: caso base!" : `n = ${n}: ainda há discos em cima`);
+                        if (n === 1) {
+                            move(o, d);
+                            S(4, 'move disco 1', `Movimento ${moves}: disco 1 de ${o} para ${d}`, { log: `Mova disco 1 de ${o} para ${d}\n`, hanoiHL: { disc: 1, to: d } });
+                            S(5, 'return', "Caso base resolvido: volta para quem chamou");
+                        } else {
+                            stack[stack.length - 1].wait = `espera hanoi(${n - 1}) tirar os menores`;
+                            hanoi(n - 1, o, a, d, 6, `Mover ${n - 1} disco(s) de ${o} para ${a} (auxiliar)`);
+                            stack[stack.length - 1].wait = '';
+                            move(o, d);
+                            S(7, `move disco ${n}`, `Movimento ${moves}: disco ${n} de ${o} para ${d}`, { log: `Mova disco ${n} de ${o} para ${d}\n`, hanoiHL: { disc: n, to: d } });
+                            stack[stack.length - 1].wait = `espera hanoi(${n - 1}) recolocar os menores`;
+                            hanoi(n - 1, a, d, o, 8, `Mover ${n - 1} disco(s) de ${a} para ${d}`);
+                        }
+                        stack.pop();
+                    }
+                    hanoi(N, 'A', 'C', 'B', 10, "Chamada inicial: mover 3 discos de A para C");
+                    st.push({
+                        line: 10, vars: { n: "—", origem: "—", destino: "—", auxiliar: "—" },
+                        pegs: snap(), stack: [], stackDesc: "Pilha vazia: missão cumprida!",
+                        hanoiDesc: `Torre movida em ${moves} movimentos (2³ − 1)`, hanoiHL: { to: 'C', all: true }
+                    });
+                    return st;
+                })()
+            },
+            heapsort: {
+                title: "12. Heapsort: Ordenação com Árvore (Heap)",
+                tip: "O vetor é lido como uma ÁRVORE: o filho esquerdo de i está em 2i+1 e o direito em 2i+2. Primeiro montamos um heap máximo (pai sempre maior que os filhos). Depois trocamos a raiz (o maior) com o último e 'peneiramos' o novo topo. Os nós verdes já estão ordenados!",
+                code: [
+                    "# Heapsort: monta um heap máximo e extrai o maior",
+                    "def peneirar(v, tam, i):",
+                    "    maior = i",
+                    "    esq = 2 * i + 1",
+                    "    dir = 2 * i + 2",
+                    "    if esq < tam and v[esq] > v[maior]:",
+                    "        maior = esq",
+                    "    if dir < tam and v[dir] > v[maior]:",
+                    "        maior = dir",
+                    "    if maior != i:",
+                    "        v[i], v[maior] = v[maior], v[i]",
+                    "        peneirar(v, tam, maior)",
+                    "",
+                    "v = [4, 10, 3, 5, 1, 8]",
+                    "n = len(v)",
+                    "for i in range(n // 2 - 1, -1, -1):",
+                    "    peneirar(v, n, i)",
+                    "for fim in range(n - 1, 0, -1):",
+                    "    v[0], v[fim] = v[fim], v[0]",
+                    "    peneirar(v, fim, 0)",
+                    "print(f'Ordenado: {v}')"
+                ],
+                initialVars: { n: 0, tam: 0, i: 0, maior: "—", esq: "—", dir: "—", fim: 0 },
+                hasVector: true,
+                vectorName: "v",
+                vectorMarkers: true,
+                vectorData: [4, 10, 3, 5, 1, 8],
+                hasTree: true,
+                hasMatrix: false,
+                hasGame: false,
+                steps: (function() {
+                    let v = [4, 10, 3, 5, 1, 8];
+                    const n = v.length;
+                    let st = [];
+                    let sortedFrom = n;
+                    const K = extra => {
+                        const k = {};
+                        for (let idx = sortedFrom; idx < n; idx++) k[idx] = 'sorted';
+                        return Object.assign(k, extra || {});
+                    };
+                    const S = (line, extra, desc, rest) => {
+                        st.push(Object.assign({ line: line, vector: [...v], kinds: K(extra), markers: {}, vectorDesc: desc, treeDesc: desc }, rest || {}));
+                    };
+                    const M = (pairs, tam) => {
+                        const m = {};
+                        pairs.forEach(([nm, idx]) => {
+                            if (typeof idx === 'number' && idx >= 0 && idx < tam) m[idx] = m[idx] ? m[idx] + '/' + nm : nm;
+                        });
+                        return m;
+                    };
+                    function sift(tam, i, callLine, callDesc) {
+                        S(callLine, {}, callDesc, { vars: { tam: tam, i: i, maior: "—", esq: "—", dir: "—" }, highlightVar: 'tam', markers: M([['i', i]], tam) });
+                        let maior = i;
+                        S(3, { [i]: 'mid' }, `maior = i = ${i}`, { vars: { maior: maior }, highlightVar: 'maior', markers: M([['i/maior', i]], tam) });
+                        const esq = 2 * i + 1;
+                        const mk = (e, d) => M([['i', i], ['maior', maior], ['esq', e], ['dir', d]], tam);
+                        S(4, { [maior]: 'mid' }, `esq = 2×${i}+1 = ${esq}`, { vars: { esq: esq }, highlightVar: 'esq', markers: mk(esq, null) });
+                        const dir = 2 * i + 2;
+                        S(5, { [maior]: 'mid' }, `dir = 2×${i}+2 = ${dir}`, { vars: { dir: dir }, highlightVar: 'dir', markers: mk(esq, dir) });
+
+                        const c1 = esq < tam && v[esq] > v[maior];
+                        S(6, esq < tam ? { [maior]: 'mid', [esq]: 'active' } : { [maior]: 'mid' },
+                          esq < tam ? `v[${esq}]=${v[esq]} > v[${maior}]=${v[maior]} ? ${c1 ? 'Sim' : 'Não'}` : `esq (${esq}) < tam (${tam}) ? Não: sem filho esquerdo`,
+                          { markers: mk(esq, dir) });
+                        if (c1) {
+                            maior = esq;
+                            S(7, { [maior]: 'mid' }, `maior = ${maior}`, { vars: { maior: maior }, highlightVar: 'maior', markers: mk(esq, dir) });
+                        }
+                        const c2 = dir < tam && v[dir] > v[maior];
+                        S(8, dir < tam ? { [maior]: 'mid', [dir]: 'active' } : { [maior]: 'mid' },
+                          dir < tam ? `v[${dir}]=${v[dir]} > v[${maior}]=${v[maior]} ? ${c2 ? 'Sim' : 'Não'}` : `dir (${dir}) < tam (${tam}) ? Não: sem filho direito`,
+                          { markers: mk(esq, dir) });
+                        if (c2) {
+                            maior = dir;
+                            S(9, { [maior]: 'mid' }, `maior = ${maior}`, { vars: { maior: maior }, highlightVar: 'maior', markers: mk(esq, dir) });
+                        }
+                        const troca = maior !== i;
+                        S(10, troca ? { [i]: 'mid', [maior]: 'mid' } : { [i]: 'mid' },
+                          `maior (${maior}) != i (${i}) ? ${troca ? 'Sim → trocar pai e filho' : 'Não → já está no lugar'}`,
+                          { markers: mk(esq, dir) });
+                        if (troca) {
+                            const a = v[i], b = v[maior];
+                            v[i] = b; v[maior] = a;
+                            S(11, { [i]: 'swap', [maior]: 'swap' }, `Troca v[${i}] ↔ v[${maior}]: ${a} ↔ ${b}`, { markers: M([['i', i], ['maior', maior]], tam) });
+                            sift(tam, maior, 12, `Peneira de novo a partir da posição ${maior}`);
+                        }
+                    }
+                    S(14, {}, "v = [4, 10, 3, 5, 1, 8] (ainda não é um heap)");
+                    S(15, {}, "n = 6 elementos", { vars: { n: n }, highlightVar: 'n' });
+                    for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+                        S(16, { [i]: 'mid' }, `Montando o heap: pai da posição ${i}`, { vars: { i: i }, highlightVar: 'i', markers: M([['i', i]], n) });
+                        sift(n, i, 17, `Peneirando o pai ${i}`);
+                    }
+                    S(16, {}, "Heap máximo pronto: a raiz é o maior!", { markers: M([['raiz', 0]], n) });
+                    for (let fim = n - 1; fim > 0; fim--) {
+                        S(18, {}, `Extraindo o maior: fim = ${fim}`, { vars: { fim: fim }, highlightVar: 'fim', markers: M([['raiz', 0], ['fim', fim]], n) });
+                        const a = v[0], b = v[fim];
+                        v[0] = b; v[fim] = a;
+                        S(19, { 0: 'swap', [fim]: 'swap' }, `Troca raiz ${a} com v[${fim}]=${b}: ${a} vai para o fim`, { markers: M([['raiz', 0], ['fim', fim]], n) });
+                        sortedFrom = fim;
+                        sift(fim, 0, 20, `Peneira a nova raiz no heap menor (tam = ${fim})`);
+                    }
+                    sortedFrom = 0;
+                    S(21, {}, "Tudo ordenado!", { log: `Ordenado: [${v.join(', ')}]\n` });
+                    return st;
+                })()
+            },
+            dijkstra: {
+                title: "13. Dijkstra: Menor Caminho em Grafo",
+                tip: "Dijkstra descobre o menor caminho de A até todos os outros nós. A cada rodada visitamos o nó NÃO visitado de menor distância e 'relaxamos' suas estradas: se passar por ele é mais curto, atualizamos. As setas verdes formam a árvore de menores caminhos!",
+                code: [
+                    "# Dijkstra: menor caminho saindo de A",
+                    "grafo = {'A': {'B': 4, 'C': 2}, 'B': {'D': 5},",
+                    "         'C': {'B': 1, 'D': 8, 'E': 10},",
+                    "         'D': {'E': 2}, 'E': {}}",
+                    "INF = 999   # infinito: ainda não sabemos chegar lá",
+                    "dist = {'A': 0, 'B': INF, 'C': INF, 'D': INF, 'E': INF}",
+                    "visitados = []",
+                    "",
+                    "while len(visitados) < 5:",
+                    "    u = min([x for x in dist if x not in visitados], key=dist.get)",
+                    "    visitados.append(u)",
+                    "    for v, peso in grafo[u].items():",
+                    "        if dist[u] + peso < dist[v]:",
+                    "            dist[v] = dist[u] + peso",
+                    "",
+                    "print(dist)"
+                ],
+                initialVars: { INF: "—", u: "—", v: "—", peso: "—" },
+                hasVector: false,
+                hasMatrix: false,
+                hasGame: false,
+                hasGraph: true,
+                hasBar: true,
+                graphInit: {
+                    title: "Mapa das Cidades (Grafo Direcionado e Ponderado)",
+                    inf: 999,
+                    nodes: { A: [70, 112], B: [225, 42], C: [225, 182], D: [400, 42], E: [530, 112] },
+                    edges: [['A', 'B', 4], ['A', 'C', 2], ['B', 'D', 5], ['C', 'B', 1], ['C', 'D', 8], ['C', 'E', 10], ['D', 'E', 2]]
+                },
+                barInit: {
+                    title: "Distância Atual de A até Cada Cidade",
+                    labels: ["A", "B", "C", "D", "E"],
+                    values: [null, null, null, null, null],
+                    yMax: 12, ticks: [0, 3, 6, 9, 12],
+                    legend: [
+                        { k: 'base', t: 'distância conhecida' },
+                        { k: 'active', t: 'u (menor não visitado)' },
+                        { k: 'mid', t: 'vizinho analisado' },
+                        { k: 'swap', t: 'distância melhorada' },
+                        { k: 'sorted', t: 'definitiva' },
+                        { k: 'dim', t: '∞ (inalcançado)' }
+                    ]
+                },
+                steps: (function() {
+                    const nodes = ['A', 'B', 'C', 'D', 'E'];
+                    const grafo = { A: { B: 4, C: 2 }, B: { D: 5 }, C: { B: 1, D: 8, E: 10 }, D: { E: 2 }, E: {} };
+                    const INF = 999;
+                    let dist = null, visited = [], pred = {};
+                    let st = [];
+                    const fd = x => x >= INF ? '∞' : x;
+                    const S = (line, g, desc, rest) => {
+                        const gg = Object.assign({ dist: dist ? Object.assign({}, dist) : null, visited: [...visited], current: null, checking: null, edge: null, updated: null, pred: Object.assign({}, pred) }, g || {});
+                        const k = {};
+                        nodes.forEach((nd, i) => {
+                            if (gg.visited.includes(nd)) k[i] = 'sorted';
+                            else if (gg.dist && gg.dist[nd] >= INF) k[i] = 'dim';
+                        });
+                        if (gg.current) k[nodes.indexOf(gg.current)] = 'active';
+                        if (gg.checking) k[nodes.indexOf(gg.checking)] = 'mid';
+                        if (gg.updated) k[nodes.indexOf(gg.updated)] = 'swap';
+                        const step = Object.assign({ line: line, graph: gg, barHL: k, graphDesc: desc, barDesc: desc }, rest || {});
+                        if (dist) step.barValues = nodes.map(nd => dist[nd] >= INF ? Infinity : dist[nd]);
+                        st.push(step);
+                    };
+                    S(2, {}, "Mapa criado: 5 cidades e 7 estradas de mão única");
+                    S(5, {}, "INF = 999 representa o infinito", { vars: { INF: INF }, highlightVar: 'INF' });
+                    dist = { A: 0, B: INF, C: INF, D: INF, E: INF };
+                    S(6, {}, "A está a 0 de si mesma; as outras, ∞");
+                    S(7, {}, "Ninguém visitado ainda");
+                    while (visited.length < 5) {
+                        S(9, {}, `len(visitados) = ${visited.length} < 5 ? Sim`);
+                        const cand = nodes.filter(x => !visited.includes(x));
+                        const u = cand.reduce((best, x) => dist[x] < dist[best] ? x : best, cand[0]);
+                        S(10, { current: u }, `Menor distância entre os não visitados: ${u} (${fd(dist[u])})`, { vars: { u: `'${u}'` }, highlightVar: 'u' });
+                        visited.push(u);
+                        S(11, { current: u }, `${u} entra em visitados: sua distância é definitiva`);
+                        const viz = Object.entries(grafo[u]);
+                        if (viz.length === 0) {
+                            S(12, { current: u }, `${u} não tem estradas de saída`, { vars: { v: "—", peso: "—" } });
+                        }
+                        viz.forEach(([v, peso]) => {
+                            S(12, { current: u, checking: v, edge: [u, v] }, `Estrada ${u}→${v} (peso ${peso})`, { vars: { v: `'${v}'`, peso: peso }, highlightVar: 'peso' });
+                            const nd = dist[u] + peso;
+                            const melhor = nd < dist[v];
+                            S(13, { current: u, checking: v, edge: [u, v] }, `${dist[u]} + ${peso} = ${nd} < ${fd(dist[v])} ? ${melhor ? 'Sim' : 'Não'}`);
+                            if (melhor) {
+                                dist[v] = nd;
+                                pred[v] = u;
+                                S(14, { current: u, updated: v, edge: [u, v] }, `dist['${v}'] = ${nd}: caminho melhor encontrado!`);
+                            }
+                        });
+                    }
+                    S(9, {}, "len(visitados) = 5 < 5 ? Não → fim do laço");
+                    const fmt = '{' + nodes.map(nd => `'${nd}': ${dist[nd]}`).join(', ') + '}';
+                    S(16, {}, "Menores distâncias de A até todas as cidades", { log: fmt + "\n" });
+                    return st;
+                })()
+            }
+
+        };
+
+        let currentPresetKey = 'vars';
+        let currentPreset = PRESETS.vars;
+        let currentStepIndex = -1;
+        let isRunning = false;
+        let timer = null;
+        let speedMs = 1000;
+        let currentVars = {};
+        let currentVector = [];
+        let currentMatrix = [];
+        let currentBarValues = [];
+        let currentBarAvg = null;
+        let currentLinePoints = [];
+        let prevLineCount = 0;
+        let currentStack = [];
+        let currentPegs = [[], [], []];
+        let currentGraph = null;
+
+        window.onload = function() {
+            lucide.createIcons();
+            loadPreset('vars');
+        };
+
+        function loadPreset(key) {
+            pauseExecution();
+            currentPresetKey = key;
+            currentPreset = PRESETS[key];
+            
+            document.getElementById('tip-text').innerText = currentPreset.tip;
+
+            // Render code lines
+            const codeContainer = document.getElementById('code-container');
+            codeContainer.innerHTML = '';
+            currentPreset.code.forEach((lineText, idx) => {
+                const lineNum = idx + 1;
+                const div = document.createElement('div');
+                div.id = `code-line-${lineNum}`;
+                div.className = 'code-line px-3 py-0.5 rounded flex items-center gap-3 border-l-4 border-transparent font-mono';
+                div.innerHTML = `<span class="text-slate-600 select-none w-6 text-right font-mono text-xs">${lineNum}</span><span class="whitespace-pre">${escapeHtml(lineText)}</span>`;
+                codeContainer.appendChild(div);
+            });
+
+            // Toggle panels
+            document.getElementById('section-vector').classList.toggle('hidden', !currentPreset.hasVector);
+            document.getElementById('section-matrix').classList.toggle('hidden', !currentPreset.hasMatrix);
+            document.getElementById('section-game').classList.toggle('hidden', !currentPreset.hasGame);
+            document.getElementById('section-stack').classList.toggle('hidden', !currentPreset.hasStack);
+            document.getElementById('section-bar').classList.toggle('hidden', !currentPreset.hasBar);
+            document.getElementById('section-line').classList.toggle('hidden', !currentPreset.hasLine);
+            document.getElementById('section-hanoi').classList.toggle('hidden', !currentPreset.hasHanoi);
+            document.getElementById('section-tree').classList.toggle('hidden', !currentPreset.hasTree);
+            document.getElementById('section-graph').classList.toggle('hidden', !currentPreset.hasGraph);
+            document.getElementById('vector-title-code').innerText = (currentPreset.vectorName || 'notas') + ' = [...]';
+
+            if (currentPreset.hasGame) {
+                setupGameStage('start');
+            }
+
+            resetExecution();
+        }
+
+        function resetExecution() {
+            pauseExecution();
+            currentStepIndex = -1;
+            document.getElementById('current-line-num').innerText = '0';
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+
+            currentVars = { ...currentPreset.initialVars };
+            renderVars();
+
+            if (currentPreset.hasVector) {
+                currentVector = [...currentPreset.vectorData];
+                renderVector(-1, "Pronto para rodar");
+            }
+
+            if (currentPreset.hasMatrix) {
+                currentMatrix = [
+                    [8.0, 9.0],
+                    [6.5, 7.5]
+                ];
+                renderMatrix(null, "Pronto para rodar");
+            }
+
+            if (currentPreset.hasGame) {
+                setupGameStage('start');
+            }
+
+            if (currentPreset.hasBar) {
+                currentBarValues = [...currentPreset.barInit.values];
+                currentBarAvg = null;
+                buildBar();
+                renderBar({}, "Pronto para rodar");
+            }
+
+            if (currentPreset.hasLine) {
+                currentLinePoints = [];
+                prevLineCount = 0;
+                document.getElementById('line-title').innerText = currentPreset.lineInit.title;
+                renderLine("Pronto para rodar");
+            }
+
+            if (currentPreset.hasStack) {
+                currentStack = [];
+                renderStack("Pilha vazia");
+            }
+
+            if (currentPreset.hasHanoi) {
+                currentPegs = currentPreset.hanoiInit.pegs.map(p => [...p]);
+                renderHanoi({}, "Pronto para rodar");
+            }
+
+            if (currentPreset.hasTree) {
+                renderTree({}, {}, "Pronto para rodar");
+            }
+
+            if (currentPreset.hasGraph) {
+                currentGraph = null;
+                renderGraph(null, "Pronto para rodar");
+            }
+
+            document.getElementById('console-output').innerHTML = '<div class="text-slate-600 italic">&gt;&gt;&gt; # O console Python aguarda a execução...</div>';
+            updateStatus('Parado', 'slate');
+        }
+
+        function renderVars(highlightVar = null) {
+            const container = document.getElementById('vars-container');
+            container.innerHTML = '';
+
+            for (const [key, val] of Object.entries(currentVars)) {
+                const isUpdated = key === highlightVar;
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border transition-all flex flex-col justify-between ${
+                    isUpdated 
+                        ? 'bg-blue-950/80 border-blue-400 text-blue-200 var-card-update shadow-lg shadow-blue-500/10' 
+                        : 'bg-slate-950 border-slate-800 text-slate-300'
+                }`;
+                card.innerHTML = `
+                    <span class="text-[11px] font-bold text-slate-400 font-mono flex items-center justify-between">
+                        ${key}
+                        <i data-lucide="tag" class="w-3 h-3 text-slate-500"></i>
+                    </span>
+                    <span class="text-lg font-bold font-mono ${isUpdated ? 'text-blue-300' : 'text-slate-100'} mt-1 truncate">
+                        ${val}
+                    </span>
+                `;
+                container.appendChild(card);
+            }
+            lucide.createIcons();
+        }
+
+        const VEC_KIND_CLASSES = {
+            base:   'bg-slate-950 border-slate-700 text-slate-300',
+            active: 'bg-indigo-600 border-indigo-400 text-white shadow-indigo-500/30 ring-2 ring-indigo-400/50',
+            swap:   'bg-rose-600 border-rose-400 text-white shadow-rose-500/30 ring-2 ring-rose-400/50',
+            sorted: 'bg-emerald-700/80 border-emerald-500 text-white shadow-emerald-500/20',
+            found:  'bg-emerald-500 border-emerald-300 text-white shadow-emerald-400/40 ring-2 ring-emerald-300/60',
+            mid:    'bg-yellow-500 border-yellow-300 text-slate-950 shadow-yellow-500/30 ring-2 ring-yellow-300/50',
+            dim:    'bg-slate-950 border-slate-800 text-slate-700 opacity-40'
+        };
+        const VEC_INDEX_COLORS = {
+            base: 'text-slate-500', active: 'text-indigo-400', swap: 'text-rose-400',
+            sorted: 'text-emerald-500', found: 'text-emerald-400', mid: 'text-yellow-400', dim: 'text-slate-700'
+        };
+
+        function renderVector(activeIndex = -1, actionDesc = "", opts = {}) {
+            if (!currentPreset.hasVector) return;
+            const container = document.getElementById('vector-container');
+            document.getElementById('vector-action-desc').innerText = actionDesc || "Aguardando...";
+            container.innerHTML = '';
+
+            const kinds = (opts && opts.kinds) || {};
+            const markers = (opts && opts.markers) || {};
+            const activeSet = new Set(Array.isArray(activeIndex) ? activeIndex : [activeIndex]);
+
+            if (currentVector.length === 0) {
+                container.innerHTML = '<span class="text-xs font-mono text-slate-600 italic py-3">lista vazia  [ ]</span>';
+                return;
+            }
+
+            currentVector.forEach((val, idx) => {
+                const kind = kinds[idx] || (activeSet.has(idx) ? 'active' : 'base');
+                const isActive = kind !== 'base' && kind !== 'dim' && kind !== 'sorted';
+                const box = document.createElement('div');
+                box.className = `flex flex-col items-center shrink-0 transition-all ${isActive ? 'scale-110 cell-highlight' : ''}`;
+                const markerSlot = currentPreset.vectorMarkers
+                    ? `<span class="h-4 text-[9px] font-mono font-bold text-yellow-300 whitespace-nowrap mb-0.5">${markers[idx] || ''}</span>`
+                    : '';
+                box.innerHTML = `
+                    ${markerSlot}
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center font-mono font-bold text-sm border-2 shadow-md transition-all ${VEC_KIND_CLASSES[kind] || VEC_KIND_CLASSES.base}">
+                        ${val}
+                    </div>
+                    <span class="text-[10px] font-mono mt-1 font-semibold ${VEC_INDEX_COLORS[kind] || VEC_INDEX_COLORS.base}">
+                        [${idx}]
+                    </span>
+                `;
+                container.appendChild(box);
+            });
+        }
+
+        function renderMatrix(activeCell = null, actionDesc = "") {
+            if (!currentPreset.hasMatrix) return;
+            const container = document.getElementById('matrix-container');
+            document.getElementById('matrix-action-desc').innerText = actionDesc || "Aguardando...";
+            container.innerHTML = '';
+
+            for (let r = 0; r < 2; r++) {
+                for (let c = 0; c < 2; c++) {
+                    const isActive = activeCell && activeCell[0] === r && activeCell[1] === c;
+                    const val = currentMatrix[r][c];
+                    const cell = document.createElement('div');
+                    cell.className = `w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center font-mono transition-all ${
+                        isActive 
+                            ? 'bg-purple-600 border-purple-400 text-white font-bold text-base scale-105 cell-highlight shadow-lg shadow-purple-500/30' 
+                            : 'bg-slate-900 border-purple-900/60 text-purple-300 font-semibold'
+                    }`;
+                    cell.innerHTML = `
+                        <span class="text-xs">${val}</span>
+                        <span class="text-[9px] opacity-60 -mt-0.5">[${r}][${c}]</span>
+                    `;
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function setupGameStage(stage, data = {}) {
+            if (!currentPreset.hasGame) return;
+            const badge = document.getElementById('game-state-badge');
+            const storyText = document.getElementById('game-story-text');
+            const choicesContainer = document.getElementById('game-choices-container');
+            choicesContainer.innerHTML = '';
+
+            if (stage === 'start') {
+                badge.innerText = "Fase 1: Encruzilhada";
+                storyText.innerText = "O herói chegou a uma bifurcação na floresta. Qual caminho tomar?";
+                
+                const btnLeft = document.createElement('button');
+                btnLeft.className = "px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow transition-all";
+                btnLeft.innerHTML = "Escolher: 'esquerda'";
+                btnLeft.onclick = () => simulateGameChoice('esquerda');
+                
+                const btnRight = document.createElement('button');
+                btnRight.className = "px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg shadow transition-all";
+                btnRight.innerHTML = "Escolher: 'direita'";
+                btnRight.onclick = () => simulateGameChoice('direita');
+
+                choicesContainer.appendChild(btnLeft);
+                choicesContainer.appendChild(btnRight);
+            } else if (stage === 'actions') {
+                badge.innerText = "Fase 2: Monstro Encontrado!";
+                storyText.innerText = "Um monstro selvagem apareceu! O que você deseja fazer agora?";
+
+                ['atacar', 'driblar', 'voltar'].forEach(action => {
+                    const btn = document.createElement('button');
+                    btn.className = "px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold text-xs rounded-lg shadow transition-all";
+                    btn.innerHTML = `Ação: '${action}'`;
+                    btn.onclick = () => simulateGameAction(action);
+                    choicesContainer.appendChild(btn);
+                });
+            } else if (stage === 'end') {
+                badge.innerText = "Fim de Jogo";
+                storyText.innerText = data.msg || "Fim da aventura!";
+                
+                const btnRestart = document.createElement('button');
+                btnRestart.className = "px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow transition-all";
+                btnRestart.innerHTML = "Jogar de Novo";
+                btnRestart.onclick = () => setupGameStage('start');
+                choicesContainer.appendChild(btnRestart);
+            }
+        }
+
+        function simulateGameChoice(choice) {
+            appendLog(`Usuário escolheu interativamente: '${choice}'\n`);
+            if (choice === 'esquerda') {
+                currentVars.escolha1 = 'esquerda';
+                renderVars('escolha1');
+                setupGameStage('actions');
+            } else {
+                currentVars.escolha1 = 'direita';
+                renderVars('escolha1');
+                setupGameStage('end', { msg: "Caminho seguro, mas sem tesouros. Fim de jogo!" });
+            }
+        }
+
+        function simulateGameAction(action) {
+            currentVars.acao = action;
+            renderVars('acao');
+            if (action === 'atacar') {
+                appendLog("Ação: 'atacar' -> Você venceu o monstro e achou um tesouro!\n");
+                setupGameStage('end', { msg: "Vitória! Você derrotou o monstro e conquistou o tesouro!" });
+            } else if (action === 'driblar') {
+                appendLog("Ação: 'driblar' -> Você driblou o monstro com estilo e fugiu!\n");
+                setupGameStage('end', { msg: "Fuga bem-sucedida! Você escapou com estilo!" });
+            } else {
+                appendLog("Ação: 'voltar' -> Você correu de volta para o início.\n");
+                setupGameStage('end', { msg: "Recuo seguro. Você retornou ao acampamento inicial." });
+            }
+        }
+
+        // ===================== BAR CHART =====================
+        const BAR_COLORS = {
+            base:   ['#4f46e5', '#818cf8'],
+            active: ['#ca8a04', '#fde047'],
+            swap:   ['#e11d48', '#fb7185'],
+            sorted: ['#059669', '#34d399'],
+            max:    ['#059669', '#34d399'],
+            mid:    ['#9333ea', '#d8b4fe'],
+            dim:    ['#334155', '#64748b']
+        };
+        const BAR_LABEL_CLASSES = {
+            base: 'text-slate-300', active: 'text-yellow-300', swap: 'text-rose-300',
+            sorted: 'text-emerald-300', max: 'text-emerald-300', mid: 'text-purple-300', dim: 'text-slate-600'
+        };
+
+        function buildBar() {
+            const cfg = currentPreset.barInit;
+            document.getElementById('bar-title').innerText = cfg.title;
+
+            let grid = '';
+            cfg.ticks.forEach(t => {
+                const pct = (t / cfg.yMax) * 100;
+                grid += `<div class="absolute left-9 right-0 border-t border-slate-800" style="bottom:${pct}%"></div>
+                         <span class="absolute left-0 w-7 text-right text-[9px] font-mono text-slate-500" style="bottom:${pct}%; transform: translateY(50%)">${t}</span>`;
+            });
+
+            let cols = '';
+            cfg.labels.forEach((lb, i) => {
+                cols += `
+                    <div class="flex-1 min-w-0 flex flex-col items-center">
+                        <div class="h-44 w-full flex flex-col justify-end items-center">
+                            <span id="bar-val-${i}" class="text-[11px] font-mono font-bold mb-1 text-slate-300">?</span>
+                            <div id="bar-rect-${i}" class="bar-rect w-full max-w-[56px] rounded-t-lg" style="height:0%"></div>
+                        </div>
+                        <div class="mt-1.5 text-center leading-tight w-full">
+                            <div class="text-[10px] font-semibold text-slate-300 truncate">${lb}</div>
+                            ${cfg.subs ? `<div class="text-[9px] font-mono text-slate-500">${cfg.subs[i]}</div>` : ''}
+                        </div>
+                    </div>`;
+            });
+
+            document.getElementById('bar-chart').innerHTML = `
+                <div class="pt-5">
+                    <div class="relative">
+                        <div class="absolute inset-x-0 top-0 h-44 pointer-events-none">${grid}</div>
+                        <div class="relative flex items-start gap-2 pl-9">${cols}</div>
+                        <div class="absolute left-9 right-0 top-0 h-44 pointer-events-none">
+                            <div id="bar-avg" class="absolute left-0 right-0 border-t-2 border-dashed border-sky-400 transition-all duration-500 hidden" style="bottom:0%">
+                                <span id="bar-avg-label" class="absolute right-0 -top-5 text-[10px] font-mono font-bold text-sky-300 bg-slate-950/90 px-1.5 rounded">média</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            // Legend
+            const legend = document.getElementById('bar-legend');
+            legend.innerHTML = '';
+            (cfg.legend || []).forEach(item => {
+                const chip = document.createElement('span');
+                chip.className = 'flex items-center gap-1.5';
+                if (item.k === 'avg') {
+                    chip.innerHTML = `<span class="inline-block w-4 border-t-2 border-dashed border-sky-400"></span> ${item.t}`;
+                } else {
+                    const [c1, c2] = BAR_COLORS[item.k] || BAR_COLORS.base;
+                    chip.innerHTML = `<span class="inline-block w-3 h-3 rounded" style="background:linear-gradient(to top, ${c1}, ${c2})"></span> ${item.t}`;
+                }
+                legend.appendChild(chip);
+            });
+        }
+
+        function renderBar(hl = {}, desc) {
+            if (!currentPreset.hasBar) return;
+            const cfg = currentPreset.barInit;
+            if (desc !== undefined) document.getElementById('bar-action-desc').innerText = desc || "Aguardando...";
+
+            currentBarValues.forEach((val, i) => {
+                const rect = document.getElementById(`bar-rect-${i}`);
+                const lab = document.getElementById(`bar-val-${i}`);
+                if (!rect || !lab) return;
+                const kind = hl[i] || 'base';
+                const [c1, c2] = BAR_COLORS[kind] || BAR_COLORS.base;
+                const pct = (val === null || val === undefined) ? 0 : (val === Infinity ? 100 : Math.max((val / cfg.yMax) * 100, val > 0 ? 2 : 0));
+                rect.style.height = pct + '%';
+                rect.style.background = `linear-gradient(to top, ${c1}, ${c2})`;
+                rect.style.boxShadow = (kind === 'base' || kind === 'dim') ? '0 0 0 transparent' : `0 0 18px ${c2}88`;
+                rect.style.opacity = kind === 'dim' ? '0.45' : '1';
+                lab.innerText = (val === null || val === undefined) ? '?' : (val === Infinity ? '∞' : cfg.decimals !== undefined ? Number(val).toFixed(cfg.decimals) : val);
+                lab.className = 'text-[11px] font-mono font-bold mb-1 ' + (BAR_LABEL_CLASSES[kind] || BAR_LABEL_CLASSES.base);
+            });
+
+            const avgEl = document.getElementById('bar-avg');
+            if (avgEl) {
+                if (currentBarAvg === null || currentBarAvg === undefined) {
+                    avgEl.classList.add('hidden');
+                } else {
+                    avgEl.classList.remove('hidden');
+                    avgEl.style.bottom = (currentBarAvg / cfg.yMax * 100) + '%';
+                    document.getElementById('bar-avg-label').innerText = 'média ' + Number(currentBarAvg).toFixed(cfg.decimals !== undefined ? cfg.decimals : 1);
+                }
+            }
+        }
+
+        // ===================== LINE CHART =====================
+        function renderLine(desc) {
+            if (!currentPreset.hasLine) return;
+            const cfg = currentPreset.lineInit;
+            if (desc !== undefined) document.getElementById('line-action-desc').innerText = desc || "Aguardando...";
+
+            const W = 600, H = 260, ml = 58, mr = 28, mt = 28, mb = 46;
+            const X = x => ml + (x - cfg.xMin) / (cfg.xMax - cfg.xMin) * (W - ml - mr);
+            const Y = y => H - mb - (y - cfg.yMin) / (cfg.yMax - cfg.yMin) * (H - mt - mb);
+            const pts = currentLinePoints;
+            const isNew = pts.length > prevLineCount;
+            prevLineCount = pts.length;
+            const baseY = H - mb;
+
+            let s = `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="lg-stroke" gradientUnits="userSpaceOnUse" x1="${ml}" y1="0" x2="${W - mr}" y2="0">
+                        <stop offset="0" stop-color="${cfg.color2}"/><stop offset="1" stop-color="${cfg.color}"/>
+                    </linearGradient>
+                    <linearGradient id="lg-area" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="${cfg.color}" stop-opacity="0.38"/><stop offset="1" stop-color="${cfg.color}" stop-opacity="0"/>
+                    </linearGradient>
+                    <filter id="lg-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
+                        <feGaussianBlur stdDeviation="3.5" result="b"/>
+                        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>`;
+
+            // Horizontal grid + y labels
+            cfg.yTicks.forEach(t => {
+                s += `<line x1="${ml}" y1="${Y(t)}" x2="${W - mr}" y2="${Y(t)}" stroke="#1e293b" stroke-width="1"/>
+                      <text x="${ml - 8}" y="${Y(t) + 3.5}" text-anchor="end" font-size="10" font-family="Fira Code, monospace" fill="#64748b">${cfg.tickFmt(t)}</text>`;
+            });
+            // Vertical ticks + x labels
+            for (let x = cfg.xMin; x <= cfg.xMax; x += cfg.xStep) {
+                s += `<line x1="${X(x)}" y1="${mt - 6}" x2="${X(x)}" y2="${baseY}" stroke="#0f172a" stroke-width="1"/>
+                      <text x="${X(x)}" y="${baseY + 16}" text-anchor="middle" font-size="10" font-family="Fira Code, monospace" fill="#64748b">${x}</text>`;
+            }
+            // Axes + titles
+            s += `<line x1="${ml}" y1="${baseY}" x2="${W - mr}" y2="${baseY}" stroke="#475569" stroke-width="1.5"/>
+                  <line x1="${ml}" y1="${mt - 6}" x2="${ml}" y2="${baseY}" stroke="#475569" stroke-width="1.5"/>
+                  <text x="${(ml + W - mr) / 2}" y="${H - 6}" text-anchor="middle" font-size="11" font-weight="600" fill="#94a3b8">${cfg.xLabel}</text>
+                  <text x="${ml}" y="14" text-anchor="start" font-size="11" font-weight="600" fill="#94a3b8">${cfg.yLabel}</text>`;
+
+            if (pts.length === 0) {
+                s += `<text x="${W / 2}" y="${H / 2 - 10}" text-anchor="middle" font-size="12" font-style="italic" fill="#475569">Os pontos aparecem aqui conforme o código executa...</text>`;
+            } else {
+                const path = arr => arr.map((p, i) => (i ? 'L' : 'M') + X(p.x).toFixed(1) + ' ' + Y(p.y).toFixed(1)).join(' ');
+                // area under the curve
+                if (pts.length > 1) {
+                    s += `<path d="${path(pts)} L ${X(pts[pts.length - 1].x).toFixed(1)} ${baseY} L ${X(pts[0].x).toFixed(1)} ${baseY} Z" fill="url(#lg-area)"/>`;
+                    // older segments
+                    if (pts.length > 2) {
+                        s += `<path d="${path(pts.slice(0, -1))}" fill="none" stroke="url(#lg-stroke)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#lg-glow)"/>`;
+                    }
+                    // newest segment (animated draw)
+                    s += `<path ${isNew ? 'class="line-draw"' : ''} pathLength="1" d="${path(pts.slice(-2))}" fill="none" stroke="url(#lg-stroke)" stroke-width="3.5" stroke-linecap="round" filter="url(#lg-glow)"/>`;
+                }
+                // points + value labels
+                pts.forEach((p, i) => {
+                    const last = i === pts.length - 1;
+                    const cx = X(p.x).toFixed(1), cy = Y(p.y).toFixed(1);
+                    if (last) {
+                        s += `<circle cx="${cx}" cy="${cy}" r="6" fill="none" stroke="${cfg.color}" stroke-width="2">
+                                <animate attributeName="r" values="6;17" dur="1.4s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0.9;0" dur="1.4s" repeatCount="indefinite"/>
+                              </circle>`;
+                    }
+                    s += `<circle cx="${cx}" cy="${cy}" r="${last ? 6.5 : 4.5}" fill="${last ? cfg.color : '#020617'}" stroke="${last ? '#ffffff' : cfg.color}" stroke-width="${last ? 2 : 2.5}"><title>${cfg.xLabel} ${p.x}: ${cfg.pointFmt(p.y)}</title></circle>
+                          <text x="${cx}" y="${(Y(p.y) - 12).toFixed(1)}" text-anchor="middle" font-size="${last ? 12 : 10}" font-weight="${last ? 700 : 500}" font-family="Fira Code, monospace" fill="${last ? '#f8fafc' : '#94a3b8'}">${cfg.pointFmt(p.y)}</text>`;
+                });
+            }
+            s += `</svg>`;
+            document.getElementById('line-chart').innerHTML = s;
+        }
+
+        // ===================== CALL STACK =====================
+        function renderStack(desc) {
+            if (!currentPreset.hasStack) return;
+            if (desc !== undefined) document.getElementById('stack-action-desc').innerText = desc || "Aguardando...";
+            const c = document.getElementById('stack-container');
+            c.innerHTML = '';
+
+            if (!currentStack.length) {
+                c.innerHTML = '<div class="text-xs font-mono text-slate-600 italic text-center py-8">pilha vazia — nenhuma função em execução</div>';
+                return;
+            }
+
+            const styles = {
+                active: 'bg-yellow-500/10 border-yellow-400/70 text-yellow-200 shadow-lg shadow-yellow-500/10',
+                wait:   'bg-slate-900 border-slate-700 text-slate-400',
+                ret:    'bg-emerald-900/30 border-emerald-500/60 text-emerald-200 shadow-lg shadow-emerald-500/10'
+            };
+            const total = currentStack.length;
+            // topo da pilha aparece em cima
+            [...currentStack].map((f, depth) => ({ f, depth })).reverse().forEach(({ f, depth }, idx) => {
+                const isTop = idx === 0;
+                const row = document.createElement('div');
+                row.className = `rounded-lg border px-3 py-2 flex items-center justify-between gap-3 font-mono text-xs ${styles[f.state] || styles.wait} ${isTop ? 'var-card-update' : ''}`;
+                row.style.marginLeft = (depth * 14) + 'px';
+                row.innerHTML = `
+                    <span class="flex items-center gap-2 font-bold">
+                        ${isTop ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/40">TOPO</span>' : '<span class="text-[9px] text-slate-600">#' + (depth + 1) + '</span>'}
+                        ${f.name}
+                    </span>
+                    <span class="text-[11px] opacity-90 text-right">${f.note || ''}</span>`;
+                c.appendChild(row);
+            });
+        }
+
+        // ===================== TORRE DE HANÓI =====================
+        const DISC_COLORS = {
+            1: ['#0ea5e9', '#7dd3fc'],
+            2: ['#059669', '#34d399'],
+            3: ['#d97706', '#fcd34d'],
+            4: ['#e11d48', '#fb7185']
+        };
+
+        function renderHanoi(hl = {}, desc) {
+            if (!currentPreset.hasHanoi) return;
+            if (desc !== undefined) document.getElementById('hanoi-action-desc').innerText = desc || "Aguardando...";
+            const c = document.getElementById('hanoi-container');
+            c.innerHTML = '';
+            const names = ['A', 'B', 'C'];
+            currentPegs.forEach((peg, pi) => {
+                const isTo = hl && hl.to === names[pi];
+                let discs = '';
+                peg.forEach(d => {
+                    const [c1, c2] = DISC_COLORS[d] || DISC_COLORS[1];
+                    const moved = hl && ((hl.disc === d && isTo) || hl.all);
+                    discs += `<div class="relative z-10 h-7 mb-0.5 rounded-lg flex items-center justify-center text-xs font-mono font-bold text-white shadow-lg ${moved ? 'var-card-update ring-2 ring-white/70' : ''}" style="width:${44 + d * 28}px; background:linear-gradient(to bottom, ${c2}, ${c1})">${d}</div>`;
+                });
+                const col = document.createElement('div');
+                col.className = 'flex-1 flex flex-col items-center';
+                col.innerHTML = `
+                    <div class="relative h-44 w-full flex flex-col-reverse items-center">
+                        <div class="absolute bottom-0 w-2.5 h-40 rounded-t-full bg-gradient-to-t from-slate-600 to-slate-500"></div>
+                        ${discs}
+                    </div>
+                    <div class="h-2 w-[92%] rounded-full bg-slate-600"></div>
+                    <div class="mt-1.5 text-xs font-mono font-bold ${isTo ? 'text-emerald-300' : 'text-slate-400'}">Pino ${names[pi]}</div>`;
+                c.appendChild(col);
+            });
+        }
+
+        // ===================== ÁRVORE DO HEAP =====================
+        const TREE_STYLES = {
+            base:   { fill: '#1e293b', stroke: '#475569', text: '#e2e8f0' },
+            active: { fill: '#4f46e5', stroke: '#818cf8', text: '#ffffff' },
+            mid:    { fill: '#eab308', stroke: '#fde047', text: '#0f172a' },
+            swap:   { fill: '#e11d48', stroke: '#fb7185', text: '#ffffff' },
+            sorted: { fill: '#047857', stroke: '#34d399', text: '#ffffff' },
+            found:  { fill: '#10b981', stroke: '#6ee7b7', text: '#ffffff' },
+            dim:    { fill: '#0f172a', stroke: '#1e293b', text: '#475569' }
+        };
+
+        function renderTree(kinds = {}, markers = {}, desc) {
+            if (!currentPreset.hasTree) return;
+            if (desc !== undefined) document.getElementById('tree-action-desc').innerText = desc || "Aguardando...";
+            const vals = currentVector;
+            const W = 600, H = 232, r = 19;
+            const pos = idx => {
+                const level = Math.floor(Math.log2(idx + 1));
+                const count = Math.pow(2, level);
+                const p = idx - (count - 1);
+                return [((p + 0.5) / count) * W, 44 + level * 66];
+            };
+            let s = `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">`;
+            // edges
+            vals.forEach((_, idx) => {
+                if (idx === 0) return;
+                const parent = Math.floor((idx - 1) / 2);
+                const [x1, y1] = pos(parent), [x2, y2] = pos(idx);
+                const faded = kinds[idx] === 'sorted' || kinds[parent] === 'sorted';
+                const hot = (kinds[idx] === 'swap' && kinds[parent] === 'swap');
+                s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${hot ? '#fb7185' : '#475569'}" stroke-width="${hot ? 3.5 : 2}" opacity="${faded ? 0.25 : 1}" stroke-linecap="round"/>`;
+            });
+            // nodes
+            vals.forEach((val, idx) => {
+                const [x, y] = pos(idx);
+                const st = TREE_STYLES[kinds[idx] || 'base'] || TREE_STYLES.base;
+                const glow = (kinds[idx] && kinds[idx] !== 'base' && kinds[idx] !== 'dim') ? `style="filter: drop-shadow(0 0 8px ${st.stroke}aa)"` : '';
+                if (markers[idx]) {
+                    s += `<text x="${x}" y="${y - r - 7}" text-anchor="middle" font-size="10" font-weight="700" font-family="Fira Code, monospace" fill="#fde047">${markers[idx]}</text>`;
+                }
+                s += `<circle cx="${x}" cy="${y}" r="${r}" fill="${st.fill}" stroke="${st.stroke}" stroke-width="2.5" ${glow}/>
+                      <text x="${x}" y="${y + 5}" text-anchor="middle" font-size="14" font-weight="700" font-family="Fira Code, monospace" fill="${st.text}">${val}</text>
+                      <text x="${x}" y="${y + r + 13}" text-anchor="middle" font-size="9" font-family="Fira Code, monospace" fill="#64748b">[${idx}]</text>`;
+            });
+            s += '</svg>';
+            document.getElementById('tree-chart').innerHTML = s;
+        }
+
+        // ===================== GRAFO (DIJKSTRA) =====================
+        function renderGraph(g, desc) {
+            if (!currentPreset.hasGraph) return;
+            const cfg = currentPreset.graphInit;
+            if (desc !== undefined) document.getElementById('graph-action-desc').innerText = desc || "Aguardando...";
+            document.getElementById('graph-title').innerText = cfg.title;
+            g = g || { dist: null, visited: [], current: null, checking: null, edge: null, updated: null, pred: {} };
+            const W = 600, H = 228, r = 21;
+            const N = cfg.nodes;
+            const marker = (id, color) => `<marker id="${id}" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="${color}"/></marker>`;
+            let s = `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg"><defs>
+                ${marker('mk-base', '#64748b')}${marker('mk-act', '#facc15')}${marker('mk-ok', '#34d399')}</defs>`;
+            let labels = '';
+            cfg.edges.forEach(([a, b, w]) => {
+                const [x1, y1] = N[a], [x2, y2] = N[b];
+                const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+                const ux = dx / len, uy = dy / len;
+                const sx = x1 + ux * (r + 1), sy = y1 + uy * (r + 1);
+                const ex = x2 - ux * (r + 5), ey = y2 - uy * (r + 5);
+                const isAct = g.edge && g.edge[0] === a && g.edge[1] === b;
+                const inTree = g.pred && g.pred[b] === a;
+                const color = isAct ? '#facc15' : (inTree ? '#34d399' : '#475569');
+                const mk = isAct ? 'mk-act' : (inTree ? 'mk-ok' : 'mk-base');
+                s += `<line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${color}" stroke-width="${isAct ? 4 : (inTree ? 3.2 : 2)}" stroke-linecap="round" marker-end="url(#${mk})" ${isAct ? 'style="filter: drop-shadow(0 0 5px #facc15aa)"' : ''}/>`;
+                const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+                labels += `<rect x="${(mx - 13).toFixed(1)}" y="${(my - 9).toFixed(1)}" width="26" height="18" rx="6" fill="#020617" stroke="${color}" stroke-width="1.5"/>
+                           <text x="${mx.toFixed(1)}" y="${(my + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" font-family="Fira Code, monospace" fill="${isAct ? '#fde047' : '#cbd5e1'}">${w}</text>`;
+            });
+            s += labels;
+            Object.entries(N).forEach(([name, [x, y]]) => {
+                let fill = '#1e293b', stroke = '#6366f1', text = '#e2e8f0';
+                if (g.visited.includes(name)) { fill = '#047857'; stroke = '#34d399'; text = '#ffffff'; }
+                if (g.checking === name) { fill = '#9333ea'; stroke = '#d8b4fe'; text = '#ffffff'; }
+                if (g.updated === name) { fill = '#e11d48'; stroke = '#fb7185'; text = '#ffffff'; }
+                if (g.current === name) { fill = '#eab308'; stroke = '#fde047'; text = '#0f172a'; }
+                const hot = g.current === name || g.checking === name || g.updated === name;
+                s += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="3" ${hot ? `style="filter: drop-shadow(0 0 9px ${stroke}cc)"` : ''}/>
+                      <text x="${x}" y="${y + 6}" text-anchor="middle" font-size="17" font-weight="800" font-family="Fira Code, monospace" fill="${text}">${name}</text>`;
+                if (g.dist) {
+                    const d = g.dist[name];
+                    const isUp = g.updated === name;
+                    const ly = y < 80 ? y - r - 7 : y + r + 16;
+                    s += `<text x="${x}" y="${ly}" text-anchor="middle" font-size="${isUp ? 13 : 11}" font-weight="700" font-family="Fira Code, monospace" fill="${isUp ? '#fb7185' : (d >= cfg.inf ? '#64748b' : '#94a3b8')}">d=${d >= cfg.inf ? '∞' : d}</text>`;
+                }
+            });
+            s += '</svg>';
+            document.getElementById('graph-chart').innerHTML = s;
+        }
+
+        function stepExecution() {
+            if (currentStepIndex >= currentPreset.steps.length - 1) {
+                pauseExecution();
+                updateStatus('Concluído', 'emerald');
+                return;
+            }
+
+            currentStepIndex++;
+            const step = currentPreset.steps[currentStepIndex];
+
+            // 1. Highlight line
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            const activeLineEl = document.getElementById(`code-line-${step.line}`);
+            if (activeLineEl) {
+                activeLineEl.classList.add('active');
+                activeLineEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            document.getElementById('current-line-num').innerText = step.line;
+
+            // 2. Vars update
+            if (step.vars) {
+                currentVars = { ...currentVars, ...step.vars };
+                renderVars(step.highlightVar);
+            }
+
+            // 3. Vector update
+            if (currentPreset.hasVector) {
+                if (step.vector) currentVector = [...step.vector];
+                renderVector(step.activeIndex !== undefined ? step.activeIndex : -1, step.vectorDesc, step);
+            }
+
+            // 4. Matrix update
+            if (currentPreset.hasMatrix) {
+                if (step.matrixData) currentMatrix = step.matrixData;
+                renderMatrix(step.activeCell, step.matrixDesc);
+            }
+
+            // 4b. Bar chart / Line chart / Call stack updates
+            if (currentPreset.hasBar) {
+                if (step.barValues) currentBarValues = [...step.barValues];
+                if (step.barAvg !== undefined) currentBarAvg = step.barAvg;
+                renderBar(step.barHL || {}, step.barDesc);
+            }
+            if (currentPreset.hasLine) {
+                if (step.linePoints) currentLinePoints.push(...step.linePoints);
+                if (step.linePoint) currentLinePoints.push(step.linePoint);
+                renderLine(step.lineDesc);
+            }
+            if (currentPreset.hasStack) {
+                if (step.stack) currentStack = step.stack;
+                renderStack(step.stackDesc);
+            }
+            if (currentPreset.hasHanoi) {
+                if (step.pegs) currentPegs = step.pegs.map(p => [...p]);
+                renderHanoi(step.hanoiHL || {}, step.hanoiDesc);
+            }
+            if (currentPreset.hasTree) {
+                renderTree(step.kinds || {}, step.markers || {}, step.treeDesc);
+            }
+            if (currentPreset.hasGraph) {
+                if (step.graph) currentGraph = step.graph;
+                renderGraph(currentGraph, step.graphDesc);
+            }
+
+            // 5. Console log
+            if (step.log) {
+                appendLog(step.log);
+            }
+
+            updateStatus(isRunning ? 'Executando...' : 'Pausado', isRunning ? 'blue' : 'amber');
+        }
+
+        function appendLog(text) {
+            const consoleOutput = document.getElementById('console-output');
+            if (consoleOutput.innerHTML.includes('O console Python')) {
+                consoleOutput.innerHTML = '';
+            }
+            const logLine = document.createElement('div');
+            logLine.className = 'font-mono text-emerald-400 animate-fade-in';
+            logLine.innerText = `>>> ${text}`;
+            consoleOutput.appendChild(logLine);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        function startExecution() {
+            if (isRunning) return;
+            if (currentStepIndex >= currentPreset.steps.length - 1) {
+                resetExecution();
+            }
+            isRunning = true;
+            document.getElementById('btn-run').disabled = true;
+            document.getElementById('btn-run').classList.add('opacity-50');
+            document.getElementById('btn-pause').disabled = false;
+
+            stepExecution();
+            timer = setInterval(() => {
+                if (currentStepIndex >= currentPreset.steps.length - 1) {
+                    pauseExecution();
+                    updateStatus('Concluído', 'emerald');
+                } else {
+                    stepExecution();
+                }
+            }, speedMs);
+        }
+
+        function pauseExecution() {
+            isRunning = false;
+            if (timer) clearInterval(timer);
+            document.getElementById('btn-run').disabled = false;
+            document.getElementById('btn-run').classList.remove('opacity-50');
+            document.getElementById('btn-pause').disabled = true;
+            if (currentStepIndex < currentPreset.steps.length - 1 && currentStepIndex >= 0) {
+                updateStatus('Pausado', 'amber');
+            }
+        }
+
+        function updateSpeed(val) {
+            speedMs = parseInt(val);
+            document.getElementById('speed-label').innerText = (speedMs / 1000).toFixed(1) + 's';
+            if (isRunning) {
+                pauseExecution();
+                startExecution();
+            }
+        }
+
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '<div class="text-slate-600 italic">&gt;&gt;&gt; # O console Python aguarda a execução...</div>';
+        }
+
+        function updateStatus(text, color) {
+            const badge = document.getElementById('status-badge');
+            const colorMap = {
+                slate: 'bg-slate-500',
+                blue: 'bg-blue-500 animate-pulse',
+                amber: 'bg-amber-500',
+                emerald: 'bg-emerald-500'
+            };
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full ${colorMap[color] || 'bg-slate-500'}"></span> ${text}`;
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
