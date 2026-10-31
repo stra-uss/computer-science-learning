@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prof. Strauss | Algoritmos, Eletrônica e Matemática</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0f1d;
+            --bg-card: #131c31;
+            --bg-card-hover: #192544;
+            --accent-blue: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.15);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #1e293b;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.2) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(10, 15, 29, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 5%;
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--text-main);
+            text-decoration: none;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        nav a:hover {
+            color: var(--accent-blue);
+        }
+
+        .hero {
+            min-height: 35vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8rem 1rem 1rem 1rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background-color: var(--accent-glow);
+            color: var(--accent-blue);
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 2rem 6rem 2rem;
+        }
+
+        .group-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .tab-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            background-color: var(--accent-glow);
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-4px);
+            background-color: var(--bg-card-hover);
+        }
+
+        .card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+        }
+
+        .card-link:hover {
+            gap: 10px;
+        }
+
+        /* Modal / Menu de Opções */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(10, 15, 29, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: var(--transition);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .close-btn:hover {
+            color: var(--text-main);
+        }
+
+        .menu-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .menu-option-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.2rem;
+            border-radius: 8px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .menu-option-item:hover {
+            background-color: var(--accent-glow);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            transform: translateX(4px);
+        }
+
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            background-color: rgba(10, 15, 29, 0.5);
+        }
+
+        footer span {
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-grid"></div>
+
+    <header>
+        <a href="#" class="logo">Prof. Strauss</a>
+        <nav>
+            <ul>
+                <li><a href="#hub">Platform</a></li>
+                <li><a href="#about">abbout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <span class="hero-badge">Mathmatics and Computer Engineering Learning</span>
+    </section>
+
+    <main class="container" id="hub">
+        <div class="group-tabs">
+            <button class="tab-btn active" onclick="switchGroup('simulations', event)">1. Simulations</button>
+            <button class="tab-btn" onclick="switchGroup('exercises', event)">2. Exercises</button>
+        </div>
+
+        <!-- Grupo 1: Simulations -->
+        <div id="simulations" class="content-section active">
+            <div class="card" onclick="openMenu('Programming and Algorithms')">
+                <h3>Programming and Algorithms</h3>
+                <p>Simule estruturas de dados avançadas, ordenação de grafos e complexidade em tempo real.</p>
+                <a href="#" class="card-link" onclick="event.stopPropagation(); openMenu('Programming and Algorithms');">Iniciar Simulação &rarr;</a>
+            </div>
+            <div class="card">
+                <h3>Machine Learning</h3>
+                <p>Visualize redes neurais, descida de gradiente e fronteiras de decisão iterativas.</p>
+                <a href="#" class="card-link">Iniciar Simulação &rarr;</a>
+            </div>
+            <div class="card">
+                <h3>Statistics</h3>
+                <p>Execute testes de hipótese interativos, simulações de Monte Carlo e distribuições probabilísticas.</p>
+                <a href="#" class="card-link">Iniciar Simulação &rarr;</a>
+            </div>
+            <div class="card">
+                <h3>Large Language Models</h3>
+                <p>Compreenda mecanismos de atenção, tokens, embeddings e pesos vetoriais visualmente.</p>
+                <a href="#" class="card-link">Iniciar Simulação &rarr;</a>
+            </div>
+        </div>
+
+        <!-- Grupo 2: Exercises -->
+        <div id="exercises" class="content-section">
+            <div class="card" onclick="openMenu('Programming and Algorithms')">
+                <h3>Programming and Algorithms</h3>
+                <p>Desafios práticos focados em algoritmos eficientes, otimização de código e lógica computacional.</p>
+                <a href="#" class="card-link" onclick="event.stopPropagation(); openMenu('Programming and Algorithms');">Resolver Exercícios &rarr;</a>
+            </div>
+            <div class="card">
+                <h3>Machine Learning</h3>
+                <p>Implemente funções de perda, regressões e algoritmos de aprendizado supervisionado do zero.</p>
+                <a href="#" class="card-link">Resolver Exercícios &rarr;</a>
+            </div>
+            <div class="card">
+                <h3>Statistics</h3>
+                <p>Resolva problemas de probabilidade aplicada, inferência estatística e análise de variância.</p>
+                <a href="#" class="card-link">Resolver Exercícios &rarr;</a>
+            </div>
+            <div class="card">
+                <h3>Large Language Models</h3>
+                <p>Exercícios sobre arquitetura Transformer, fine-tuning prático e manipulação de prompts.</p>
+                <a href="#" class="card-link">Resolver Exercícios &rarr;</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal / Menu de Opções -->
+    <div id="optionsModal" class="modal-overlay" onclick="closeMenu(event)">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modalTitle">Programming and Algorithms</h3>
+                <button class="close-btn" onclick="closeMenuDirect()">&times;</button>
+            </div>
+            <div class="menu-options">
+                <a href="algorithms-simulator-visualizador.html" class="menu-option-item">
+                    <span>Algorithms Simulator</span>
+                    <span>&rarr;</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 <span>Prof. Strauss</span>. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        function switchGroup(groupId, evt) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+
+            document.getElementById(groupId).classList.add('active');
+            if(evt && evt.currentTarget) {
+                evt.currentTarget.classList.add('active');
+            }
+        }
+
+        function openMenu(topicName) {
+            document.getElementById('modalTitle').innerText = topicName;
+            document.getElementById('optionsModal').classList.add('active');
+        }
+
+        function closeMenu(evt) {
+            if (evt.target.id === 'optionsModal') {
+                document.getElementById('optionsModal').classList.remove('active');
+            }
+        }
+
+        function closeMenuDirect() {
+            document.getElementById('optionsModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
